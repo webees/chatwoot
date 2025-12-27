@@ -3,6 +3,44 @@ entries:
   chatwoot:
   - apiVersion: v2
     appVersion: v4.8.0
+    created: "2025-12-27T21:19:22.097240706Z"
+    dependencies:
+    - condition: postgresql.enabled
+      name: postgresql
+      repository: https://charts.bitnami.com/bitnami
+      version: 11.6.7
+    - condition: redis.enabled
+      name: redis
+      repository: https://charts.bitnami.com/bitnami
+      version: 16.12.2
+    description: "Open-source customer engagement suite, an alternative to Intercom,
+      Zendesk, Salesforce Service Cloud etc. \U0001F525\U0001F4AC"
+    digest: 9ed2ab8374bcceabaab6816154e552ba2196a4696f29e9faaefaf25738b4e23d
+    home: https://github.com/chatwoot/charts
+    icon: https://chatwoot-public-assets.s3.amazonaws.com/logo/square.png
+    keywords:
+    - chatwoot
+    - open source
+    - customer support
+    - chat
+    - ruby
+    - rails
+    - crm
+    maintainers:
+    - email: vishnu@chatwoot.com
+      name: vishnu-narayanan
+    - email: sojan@chatwoot.com
+      name: sojan-official
+    name: chatwoot
+    sources:
+    - https://github.com/chatwoot/chatwoot
+    - http://www.chatwoot.com
+    type: application
+    urls:
+    - https://github.com/webees/chatwoot/releases/download/chatwoot-2.0.10/chatwoot-2.0.10.tgz
+    version: 2.0.10
+  - apiVersion: v2
+    appVersion: v4.8.0
     created: "2025-12-27T21:09:48.558857217Z"
     dependencies:
     - condition: postgresql.enabled
@@ -39,4 +77,4 @@ entries:
     urls:
     - https://github.com/webees/chatwoot/releases/download/chatwoot-2.0.9/chatwoot-2.0.9.tgz
     version: 2.0.9
-generated: "2025-12-27T21:09:48.558866234Z"
+generated: "2025-12-27T21:19:22.097256236Z"
