@@ -12,6 +12,13 @@ image:
 autoscaling:
   apiVersion: autoscaling/v2
 
+podDisruptionBudget:
+  enabled: false
+  # minAvailable: 1
+  # maxUnavailable: 1
+
+topologySpreadConstraints: []
+
 web:
   hpa:
      # set this to true to enable horizontal pod autoscaling
@@ -37,17 +44,13 @@ web:
     periodSeconds: 10
     timeoutSeconds: 5
     failureThreshold: 60
-  resources: {}
-    # We usually recommend not to specify default resources and to leave this as a conscious
-    # choice for the user. This also increases chances charts run on environments with little
-    # resources, such as Minikube. If you do want to specify resources, uncomment the following
-    # lines, adjust them as necessary, and remove the curly braces after 'resources:'.
-    # limits:
-    #   cpu: 500m
-    #   memory: 512Mi
-    # requests:
-    #   cpu: 250m
-    #   memory: 256Mi
+  resources:
+    limits:
+      cpu: 500m
+      memory: 512Mi
+    requests:
+      cpu: 100m
+      memory: 256Mi
 worker:
   hpa:
     # set this to true to enable horizontal pod autoscaling
@@ -58,17 +61,13 @@ worker:
     minpods: 2
     maxpods: 10
   replicaCount: 2
-  resources: {}
-    # We usually recommend not to specify default resources and to leave this as a conscious
-    # choice for the user. This also increases chances charts run on environments with little
-    # resources, such as Minikube. If you do want to specify resources, uncomment the following
-    # lines, adjust them as necessary, and remove the curly braces after 'resources:'.
-    # limits:
-    #   cpu: 500m
-    #   memory: 512Mi
-    # requests:
-    #   cpu: 250m
-    #   memory: 256Mi
+  resources:
+    limits:
+      cpu: 500m
+      memory: 512Mi
+    requests:
+      cpu: 100m
+      memory: 256Mi
 
 services:
   name: chatwoot
@@ -138,14 +137,21 @@ nodeSelector: {}
 
 tolerations: []
 
-affinity: {}
+affinity: &affinity
+  nodeAffinity:
+    requiredDuringSchedulingIgnoredDuringExecution:
+      nodeSelectorTerms:
+        - matchExpressions:
+            - key: worker
+              operator: Exists
 
 postgresql:
   enabled: true
   nameOverride: chatwoot-postgresql
   image:
-    registry: ghcr.io
-    repository: chatwoot/pgvector
+    registry: docker.io
+    repository: pgvector/pgvector
+    tag: pg16
   auth:
     username: postgres
     postgresPassword: postgres
@@ -159,10 +165,40 @@ postgresql:
   # The following variables are only used when internal PG is disabled
   # postgresqlHost: postgres
   # postgresqlPort: 5432
+  primary:
+    persistence:
+      enabled: true
+      size: 1Gi
+      accessModes:
+        - ReadWriteMany
+    extraEnv:
+      - name: POSTGRES_PASSWORD
+        valueFrom:
+          secretKeyRef:
+            name: chatwoot-postgresql
+            key: postgresql-password
+    affinity: *affinity
+    podAntiAffinityPreset: ""
+  readReplicas:
+    persistence:
+      enabled: true
+      size: 1Gi
+      accessModes:
+        - ReadWriteMany
+    extraEnv:
+      - name: POSTGRES_PASSWORD
+        valueFrom:
+          secretKeyRef:
+            name: chatwoot-postgresql
+            key: postgresql-password
+    affinity: *affinity
+    podAntiAffinityPreset: ""
 
 redis:
   image:
-    repository: bitnamilegacy/redis
+    registry: docker.io
+    repository: redis
+    tag: 7.4
   enabled: true
   nameOverride: chatwoot-redis
   auth:
@@ -181,11 +217,45 @@ redis:
     # image:
     #   repository: bitnamilegacy/redis-sentinel
     #   tag: 6.2.7-debian-11-r3
+  affinity: *affinity
   master:
+    command:
+      - redis-server
+    args:
+      - "--appendonly"
+      - "yes"
+      - "--requirepass"
+      - "$(REDIS_PASSWORD)"
+      - "--dir"
+      - "/data"
+    extraEnv:
+      - name: REDIS_PASSWORD
+        valueFrom:
+          secretKeyRef:
+            name: chatwoot-redis
+            key: redis-password
+    podSecurityContext:
+      fsGroup: 999
+      runAsUser: 999
+    containerSecurityContext:
+      runAsUser: 999
+    affinity: *affinity
+    podAntiAffinityPreset: ""
     persistence:
       enabled: true
+      mountPath: /data
+      size: 1Gi
+      accessModes:
+        - ReadWriteMany
       # If change pvc size redis.master.persistence.size: 20Gi
   replica:
+    persistence:
+      enabled: true
+      size: 1Gi
+      accessModes:
+        - ReadWriteMany
+    affinity: *affinity
+    podAntiAffinityPreset: ""
     replicaCount: 1
 
 # Provide affinity for hooks if needed
@@ -208,6 +278,7 @@ hooks:
 existingEnvSecret: ""
 
 env:
+  DEFAULT_LOCALE: zh-CN
   ACTIVE_STORAGE_SERVICE: local
   ANDROID_BUNDLE_ID: com.chatwoot.app
   ANDROID_SHA256_CERT_FINGERPRINT: "AC:73:8E:DE:EB:56:EA:CC:10:87:02:A7:65:37:7B:38:D4:5D:D4:53:F8:3B:FB:D3:C6:28:64:1D:AA:08:1E:D8"
@@ -242,7 +313,7 @@ env:
   SENTRY_DSN: ""
   SLACK_CLIENT_ID: ""
   SLACK_CLIENT_SECRET: ""
-  SMTP_ADDRESS: ""
+  SMTP_ADDRESS: smtp.gmail.com
   SMTP_AUTHENTICATION: plain
   SMTP_ENABLE_STARTTLS_AUTO: true
   SMTP_OPENSSL_VERIFY_MODE: none
