@@ -1,14 +1,12 @@
 {{/*
-Expand the name of the chart.
+🏷️ 扩展 Chart 名称
 */}}
 {{- define "chatwoot.name" -}}
 {{- default .Chart.Name .Values.nameOverride | trunc 63 | trimSuffix "-" -}}
 {{- end -}}
 
 {{/*
-Create a default fully qualified app name.
-We truncate at 63 chars because some Kubernetes name fields are limited to this (by the DNS naming spec).
-If release name contains chart name it will be used as a full name.
+🔖 创建完整应用名称
 */}}
 {{- define "chatwoot.fullname" -}}
 {{- if .Values.fullnameOverride }}
@@ -24,14 +22,14 @@ If release name contains chart name it will be used as a full name.
 {{- end }}
 
 {{/*
-Create chart name and version as used by the chart label.
+📊 Chart 名称和版本
 */}}
 {{- define "chatwoot.chart" -}}
 {{- printf "%s-%s" .Chart.Name .Chart.Version | replace "+" "_" | trunc 63 | trimSuffix "-" }}
 {{- end }}
 
 {{/*
-Common labels
+🏷️ 通用标签
 */}}
 {{- define "chatwoot.labels" -}}
 helm.sh/chart: {{ include "chatwoot.chart" . }}
@@ -43,7 +41,7 @@ app.kubernetes.io/managed-by: {{ .Release.Service }}
 {{- end }}
 
 {{/*
-Selector labels
+🎯 选择器标签
 */}}
 {{- define "chatwoot.selectorLabels" -}}
 app.kubernetes.io/name: {{ include "chatwoot.name" . }}
@@ -51,7 +49,7 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
 
 {{/*
-Create the name of the service account to use
+👤 ServiceAccount 名称
 */}}
 {{- define "chatwoot.serviceAccountName" -}}
 {{- if .Values.serviceAccount.create }}
@@ -61,7 +59,9 @@ Create the name of the service account to use
 {{- end }}
 {{- end }}
 
-
+{{/*
+🐘 PostgreSQL 完整名称
+*/}}
 {{- define "chatwoot.postgresql.fullname" -}}
 {{- if .Values.postgresql.fullnameOverride -}}
 {{- .Values.postgresql.fullnameOverride | trunc 63 | trimSuffix "-" -}}
@@ -75,6 +75,9 @@ Create the name of the service account to use
 {{- end -}}
 {{- end -}}
 
+{{/*
+🔴 Redis 完整名称
+*/}}
 {{- define "chatwoot.redis.fullname" -}}
 {{- if .Values.redis.fullnameOverride -}}
 {{- .Values.redis.fullnameOverride | trunc 63 | trimSuffix "-" -}}
@@ -88,9 +91,8 @@ Create the name of the service account to use
 {{- end -}}
 {{- end -}}
 
-
 {{/*
-Set postgres host
+🐘 PostgreSQL 主机
 */}}
 {{- define "chatwoot.postgresql.host" -}}
 {{- if .Values.postgresql.enabled -}}
@@ -101,7 +103,7 @@ Set postgres host
 {{- end -}}
 
 {{/*
-Set postgres secret
+🔐 PostgreSQL Secret
 */}}
 {{- define "chatwoot.postgresql.secret" -}}
 {{- if .Values.postgresql.enabled -}}
@@ -112,7 +114,7 @@ Set postgres secret
 {{- end -}}
 
 {{/*
-Set postgres secretKey
+🔑 PostgreSQL Secret Key
 */}}
 {{- define "chatwoot.postgresql.secretKey" -}}
 {{- if .Values.postgresql.enabled -}}
@@ -123,18 +125,18 @@ Set postgres secretKey
 {{- end -}}
 
 {{/*
-Set postgres port
+🔌 PostgreSQL 端口
 */}}
 {{- define "chatwoot.postgresql.port" -}}
 {{- if .Values.postgresql.enabled -}}
-    5432
+5432
 {{- else -}}
 {{- default 5432 .Values.postgresql.postgresqlPort -}}
 {{- end -}}
 {{- end -}}
 
 {{/*
-Set redis host
+🔴 Redis 主机
 */}}
 {{- define "chatwoot.redis.host" -}}
 {{- if .Values.redis.enabled -}}
@@ -145,7 +147,7 @@ Set redis host
 {{- end -}}
 
 {{/*
-Set redis secret
+🔐 Redis Secret
 */}}
 {{- define "chatwoot.redis.secret" -}}
 {{- if .Values.redis.enabled -}}
@@ -156,7 +158,7 @@ Set redis secret
 {{- end -}}
 
 {{/*
-Set redis secretKey
+🔑 Redis Secret Key
 */}}
 {{- define "chatwoot.redis.secretKey" -}}
 {{- if .Values.redis.enabled -}}
@@ -167,18 +169,18 @@ Set redis secretKey
 {{- end -}}
 
 {{/*
-Set redis port
+🔌 Redis 端口
 */}}
 {{- define "chatwoot.redis.port" -}}
 {{- if .Values.redis.enabled -}}
-    6379
+6379
 {{- else -}}
 {{- default 6379 .Values.redis.port -}}
 {{- end -}}
 {{- end -}}
 
 {{/*
-Set redis password
+🔑 Redis 密码
 */}}
 {{- define "chatwoot.redis.password" -}}
 {{- if .Values.redis.enabled -}}
@@ -189,14 +191,25 @@ Set redis password
 {{- end -}}
 
 {{/*
-Set redis URL
+🔗 Redis URL
 */}}
 {{- define "chatwoot.redis.url" -}}
 {{- if .Values.redis.enabled -}}
-    redis://:{{ .Values.redis.auth.password }}@{{ template "chatwoot.redis.host" . }}:{{ template "chatwoot.redis.port" . }}
+redis://:{{ .Values.redis.auth.password }}@{{ template "chatwoot.redis.host" . }}:{{ template "chatwoot.redis.port" . }}
 {{- else if .Values.env.REDIS_TLS -}}
-    rediss://:$(REDIS_PASSWORD)@{{ .Values.redis.host }}:{{ .Values.redis.port }}
+rediss://:$(REDIS_PASSWORD)@{{ .Values.redis.host }}:{{ .Values.redis.port }}
 {{- else -}}
-    redis://:$(REDIS_PASSWORD)@{{ .Values.redis.host }}:{{ .Values.redis.port }}
+redis://:$(REDIS_PASSWORD)@{{ .Values.redis.host }}:{{ .Values.redis.port }}
 {{- end -}}
+{{- end -}}
+
+{{/*
+🔧 渲染模板值
+*/}}
+{{- define "common.tplvalues.render" -}}
+{{- if typeIs "string" .value }}
+{{- tpl .value .context }}
+{{- else }}
+{{- tpl (.value | toYaml) .context }}
+{{- end }}
 {{- end -}}
