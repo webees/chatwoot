@@ -12,6 +12,13 @@ image:
 autoscaling:
   apiVersion: autoscaling/v2
 
+podDisruptionBudget:
+  enabled: false
+  # minAvailable: 1
+  # maxUnavailable: 1
+
+topologySpreadConstraints: []
+
 web:
   hpa:
      # set this to true to enable horizontal pod autoscaling
@@ -22,17 +29,13 @@ web:
     minpods: 1
     maxpods: 10
   replicaCount: 1
-  resources: {}
-    # We usually recommend not to specify default resources and to leave this as a conscious
-    # choice for the user. This also increases chances charts run on environments with little
-    # resources, such as Minikube. If you do want to specify resources, uncomment the following
-    # lines, adjust them as necessary, and remove the curly braces after 'resources:'.
-    # limits:
-    #   cpu: 500m
-    #   memory: 512Mi
-    # requests:
-    #   cpu: 250m
-    #   memory: 256Mi
+  resources:
+    limits:
+      cpu: 500m
+      memory: 512Mi
+    requests:
+      cpu: 100m
+      memory: 256Mi
 worker:
   hpa:
     # set this to true to enable horizontal pod autoscaling
@@ -43,17 +46,13 @@ worker:
     minpods: 2
     maxpods: 10
   replicaCount: 2
-  resources: {}
-    # We usually recommend not to specify default resources and to leave this as a conscious
-    # choice for the user. This also increases chances charts run on environments with little
-    # resources, such as Minikube. If you do want to specify resources, uncomment the following
-    # lines, adjust them as necessary, and remove the curly braces after 'resources:'.
-    # limits:
-    #   cpu: 500m
-    #   memory: 512Mi
-    # requests:
-    #   cpu: 250m
-    #   memory: 256Mi
+  resources:
+    limits:
+      cpu: 500m
+      memory: 512Mi
+    requests:
+      cpu: 100m
+      memory: 256Mi
 
 services:
   name: chatwoot
@@ -68,7 +67,7 @@ services:
 
 imagePullSecrets: []
 nameOverride: ""
-fullnameOverride: ""
+fullnameOverride: "chatwoot"
 
 serviceAccount:
   # Specifies whether a service account should be created
@@ -123,7 +122,13 @@ nodeSelector: {}
 
 tolerations: []
 
-affinity: {}
+affinity: &affinity
+  nodeAffinity:
+    requiredDuringSchedulingIgnoredDuringExecution:
+      nodeSelectorTerms:
+        - matchExpressions:
+            - key: worker
+              operator: Exists
 
 postgresql:
   enabled: true
@@ -144,6 +149,22 @@ postgresql:
   # The following variables are only used when internal PG is disabled
   # postgresqlHost: postgres
   # postgresqlPort: 5432
+  primary:
+    persistence:
+      enabled: true
+      size: 1Gi
+      accessModes:
+        - ReadWriteMany
+    affinity: *affinity
+    podAntiAffinityPreset: ""
+  readReplicas:
+    persistence:
+      enabled: true
+      size: 1Gi
+      accessModes:
+        - ReadWriteMany
+    affinity: *affinity
+    podAntiAffinityPreset: ""
 
 redis:
   image:
@@ -162,10 +183,13 @@ redis:
   # port: 6379
   master:
     persistence:
-      enabled: true
-      # If change pvc size redis.master.persistence.size: 20Gi
+      enabled: false
+      medium: Memory
   replica:
-    replicaCount: 1
+    persistence:
+      enabled: false
+      medium: Memory
+    replicaCount: 0
 
 # Provide affinity for hooks if needed
 hooks:
@@ -187,6 +211,7 @@ hooks:
 existingEnvSecret: ""
 
 env:
+  DEFAULT_LOCALE: zh-CN
   ACTIVE_STORAGE_SERVICE: local
   ANDROID_BUNDLE_ID: com.chatwoot.app
   ANDROID_SHA256_CERT_FINGERPRINT: "AC:73:8E:DE:EB:56:EA:CC:10:87:02:A7:65:37:7B:38:D4:5D:D4:53:F8:3B:FB:D3:C6:28:64:1D:AA:08:1E:D8"
@@ -221,7 +246,7 @@ env:
   SENTRY_DSN: ""
   SLACK_CLIENT_ID: ""
   SLACK_CLIENT_SECRET: ""
-  SMTP_ADDRESS: ""
+  SMTP_ADDRESS: smtp.gmail.com
   SMTP_AUTHENTICATION: plain
   SMTP_ENABLE_STARTTLS_AUTO: true
   SMTP_OPENSSL_VERIFY_MODE: none
