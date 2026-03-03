@@ -3,17 +3,18 @@ templates:
   - values.yaml
   - _helpers.tpl
 tests:
-  - it: should verify redis host points to master service
+  - it: should verify redis secret path for bitnami chart
     template: web-deployment.yaml
     set:
       redis:
-        enabled: true
-        nameOverride: "chatwoot-redis"
-      fullnameOverride: "chatwoot"
+        auth:
+          existingSecret: "custom-redis-secret"
+          existingSecretPasswordKey: "custom-key"
     asserts:
-      # We check the environment variable SECRET chatwoot-env which is composed in env-secret.yaml
-      # but easier to check if we trust the logic in env-secret.yaml, 
-      # or we can test env-secret.yaml directly.
-      - matchRegex:
-          path: spec.template.spec.containers[0].envFrom[0].secretRef.name
-          pattern: chatwoot-env
+      - equal:
+          path: spec.template.spec.containers[0].env[0].valueFrom.secretKeyRef.name
+          value: "custom-redis-secret"
+      - equal:
+          path: spec.template.spec.containers[0].env[0].valueFrom.secretKeyRef.key
+          value: "custom-key"
+

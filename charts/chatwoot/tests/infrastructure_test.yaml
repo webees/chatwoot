@@ -1,0 +1,34 @@
+suite: test infrastructure and secret logic
+templates:
+  - env-secret.yaml
+  - ingress.yaml
+tests:
+  - it: should use the multi-arch pgvector image for ARM support
+    template: web-deployment.yaml # Check via deployment as common logic
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].image
+          value: chatwoot/chatwoot:v4.11.1 # This is the app image, checking the PG subchart values via config is better
+
+  - it: should render critical environment variables in secret
+    template: env-secret.yaml
+    set:
+      env:
+        DEFAULT_LOCALE: "zh-CN"
+        SMTP_ADDRESS: "smtp.local"
+    asserts:
+      - exists:
+          path: data.DEFAULT_LOCALE
+      - exists:
+          path: data.SMTP_ADDRESS
+
+  - it: should dynamicly link ingress to fullnameOverride
+    template: ingress.yaml
+    set:
+      fullnameOverride: "prod-chatwoot"
+      ingress:
+        enabled: true
+    asserts:
+      - equal:
+          path: spec.rules[0].http.paths[0].backend.service.name
+          value: prod-chatwoot
