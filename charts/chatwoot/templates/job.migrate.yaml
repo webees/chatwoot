@@ -41,12 +41,13 @@ spec:
         - rails
         - db:chatwoot_prepare
         env:
-        {{- include "chatwoot.env.common" . | nindent 8 }}
+          {{- include "chatwoot.env.common" . | nindent 10 }}
+        envFrom:
+          {{- include "chatwoot.envFrom.common" . | nindent 10 }}
         imagePullPolicy: {{ .Values.image.pullPolicy }}
         volumeMounts:
             - name: cache
               mountPath: /app/tmp
-      serviceAccountName: {{ include "chatwoot.serviceAccountName" . }}
       {{- if .Values.securityContext }}
       securityContext: {{ .Values.securityContext | toYaml | nindent 8 }}
       {{- end }}

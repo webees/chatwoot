@@ -27,7 +27,10 @@ spec:
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           args: [bundle, exec, sidekiq, -C, config/sidekiq.yml]
-          env: {{- include "chatwoot.env.common" . | nindent 12 }}
+          env:
+            {{- include "chatwoot.env.common" . | nindent 12 }}
+          envFrom:
+            {{- include "chatwoot.envFrom.common" . | nindent 12 }}
           volumeMounts: [{name: cache, mountPath: /app/tmp}]
           {{- with .Values.worker.resources }}
           resources: {{ toYaml . | nindent 12 }}
