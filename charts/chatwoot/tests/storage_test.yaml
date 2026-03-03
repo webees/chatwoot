@@ -1,0 +1,46 @@
+suite: test smart storage engine
+templates:
+  - web.yaml
+tests:
+  - it: should generate S3 environment variables correctly
+    set:
+      storage:
+        type: s3
+        s3:
+          bucket: my-bucket
+          region: us-east-1
+          accessKeyId: AKIA_TEST
+          secretAccessKey: SECRET_TEST
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content: { name: ACTIVE_STORAGE_SERVICE, value: "s3" }
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content: { name: S3_BUCKET_NAME, value: "my-bucket" }
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content: { name: S3_REGION, value: "us-east-1" }
+
+  - it: should generate GCS environment variables correctly
+    set:
+      storage:
+        type: gcs
+        gcs:
+          bucket: gcs-bucket
+          project: gcs-project
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content: { name: ACTIVE_STORAGE_SERVICE, value: "google" }
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content: { name: GCS_BUCKET, value: "gcs-bucket" }
+
+  - it: should default to local storage
+    set:
+      storage: { type: local }
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content: { name: ACTIVE_STORAGE_SERVICE, value: "local" }

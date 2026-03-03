@@ -2,6 +2,11 @@
 
 ### 🛠 维护记录 (Maintenance Log)
 
+#### v3.7.0 (2026-03-04) - 功能推导全深度验证
+- **Functional Coverage**: 新增 `storage_test.yaml` 与 `vpa_test.yaml`。
+- **Engine Analytics**: 首次实现了对“配置编程化”逻辑（S3/GCS 自动推导）的单元测试覆盖。
+- **Deterministic CI**: 优化了 `policy.yaml` 的渲染确定性，消除了由于空文档导致的测试偏移。
+
 #### v3.6.0 (2026-03-04) - 严苛 CI/CD 与自动化集成
 - **Workflow Consolidation**: 将 `Lint/Test` 与 `Release` 合并为单一流水线，引入 `needs` 依赖门禁。
 - **Safety Gate**: 确保 100% 单元测试通过后方可执行版本自增与发布。
