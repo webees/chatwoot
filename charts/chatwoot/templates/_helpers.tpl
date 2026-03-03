@@ -7,10 +7,8 @@ Expand the name of the chart.
 
 {{/*
 Create a default fully qualified app name.
-We truncate at 63 chars because some Kubernetes name fields are limited to this (by the DNS naming spec).
-If release name contains chart name it will be used as a full name.
 */}}
-{{- define "chatwoot.fullname" -}}
+{{- define "chatwoot.full" -}}
 {{- if .Values.fullnameOverride }}
 {{- .Values.fullnameOverride | trunc 63 | trimSuffix "-" }}
 {{- else }}
@@ -24,18 +22,11 @@ If release name contains chart name it will be used as a full name.
 {{- end }}
 
 {{/*
-Create chart name and version as used by the chart label.
-*/}}
-{{- define "chatwoot.chart" -}}
-{{- printf "%s-%s" .Chart.Name .Chart.Version | replace "+" "_" | trunc 63 | trimSuffix "-" }}
-{{- end }}
-
-{{/*
 Common labels
 */}}
 {{- define "chatwoot.labels" -}}
 helm.sh/chart: {{ include "chatwoot.chart" . }}
-{{ include "chatwoot.selectorLabels" . }}
+{{ include "chatwoot.selector" . }}
 {{- if .Chart.AppVersion }}
 app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
 {{- end }}
@@ -45,142 +36,76 @@ app.kubernetes.io/managed-by: {{ .Release.Service }}
 {{/*
 Selector labels
 */}}
-{{- define "chatwoot.selectorLabels" -}}
+{{- define "chatwoot.selector" -}}
 app.kubernetes.io/name: {{ include "chatwoot.name" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
 
 {{/*
-Create the name of the service account to use
+Chart name and version
+*/}}
+{{- define "chatwoot.chart" -}}
+{{- printf "%s-%s" .Chart.Name .Chart.Version | replace "+" "_" | trunc 63 | trimSuffix "-" }}
+{{- end }}
+
+{{/*
+Service Account Name
 */}}
 {{- define "chatwoot.serviceAccountName" -}}
 {{- if .Values.serviceAccount.create }}
-{{- default (include "chatwoot.fullname" .) .Values.serviceAccount.name }}
+{{- default (include "chatwoot.full" .) .Values.serviceAccount.name }}
 {{- else }}
 {{- default "default" .Values.serviceAccount.name }}
 {{- end }}
 {{- end }}
 
-
-{{- define "chatwoot.postgresql.fullname" -}}
+{{/*
+Database (PostgreSQL) Helpers
+*/}}
+{{- define "chatwoot.db.full" -}}
 {{- if .Values.postgresql.fullnameOverride -}}
 {{- .Values.postgresql.fullnameOverride | trunc 63 | trimSuffix "-" -}}
-{{- else -}}
-{{- $name := default .Chart.Name .Values.postgresql.nameOverride -}}
-{{- if contains $name .Release.Name -}}
-{{- .Release.Name | trunc 63 | trimSuffix "-" -}}
 {{- else -}}
 {{- printf "%s-%s" .Release.Name "chatwoot-postgresql" | trunc 63 | trimSuffix "-" -}}
 {{- end -}}
 {{- end -}}
-{{- end -}}
 
-{{- define "chatwoot.redis.fullname" -}}
-{{- if .Values.redis.fullnameOverride -}}
-{{- .Values.redis.fullnameOverride | trunc 63 | trimSuffix "-" -}}
-{{- else -}}
-{{- $name := default .Chart.Name .Values.redis.nameOverride -}}
-{{- if contains $name .Release.Name -}}
-{{- .Release.Name | trunc 63 | trimSuffix "-" -}}
-{{- else -}}
-{{- printf "%s-%s" .Release.Name "chatwoot-redis" | trunc 63 | trimSuffix "-" -}}
-{{- end -}}
-{{- end -}}
-{{- end -}}
-
-
-{{/*
-Set postgres host
-*/}}
-{{- define "chatwoot.postgresql.host" -}}
+{{- define "chatwoot.db.host" -}}
 {{- if .Values.postgresql.enabled -}}
-{{- template "chatwoot.postgresql.fullname" . -}}
+{{- include "chatwoot.db.full" . -}}
 {{- else -}}
 {{- .Values.postgresql.postgresqlHost -}}
 {{- end -}}
 {{- end -}}
 
-{{/*
-Set postgres secret
-*/}}
-{{- define "chatwoot.postgresql.secret" -}}
-{{- if .Values.postgresql.enabled -}}
-{{- template "chatwoot.postgresql.fullname" . -}}
-{{- else -}}
-{{- template "chatwoot.fullname" . -}}
-{{- end -}}
-{{- end -}}
-
-{{/*
-Set postgres secretKey
-*/}}
-{{- define "chatwoot.postgresql.secretKey" -}}
-{{- if .Values.postgresql.enabled -}}
-"postgresql-password"
-{{- else -}}
-{{- default "postgresql-password" .Values.postgresql.auth.secretKeys.adminPasswordKey | quote -}}
-{{- end -}}
-{{- end -}}
-
-{{/*
-Set postgres port
-*/}}
-{{- define "chatwoot.postgresql.port" -}}
-{{- if .Values.postgresql.enabled -}}
-    5432
-{{- else -}}
+{{- define "chatwoot.db.port" -}}
 {{- default 5432 .Values.postgresql.postgresqlPort -}}
 {{- end -}}
-{{- end -}}
 
 {{/*
-Set redis host
+Cache (Redis) Helpers
 */}}
-{{- define "chatwoot.redis.host" -}}
+{{- define "chatwoot.cache.full" -}}
+{{- if .Values.redis.fullnameOverride -}}
+{{- .Values.redis.fullnameOverride | trunc 63 | trimSuffix "-" -}}
+{{- else -}}
+{{- printf "%s-%s" .Release.Name "chatwoot-redis" | trunc 63 | trimSuffix "-" -}}
+{{- end -}}
+{{- end -}}
+
+{{- define "chatwoot.cache.host" -}}
 {{- if .Values.redis.enabled -}}
-{{- template "chatwoot.redis.fullname" . -}}-master
+{{- include "chatwoot.cache.full" . -}}-master
 {{- else -}}
 {{- .Values.redis.host }}
 {{- end -}}
 {{- end -}}
 
-{{/*
-Set redis secret
-*/}}
-{{- define "chatwoot.redis.secret" -}}
-{{- if .Values.redis.enabled -}}
-{{- template "chatwoot.redis.fullname" . -}}
-{{- else -}}
-{{- template "chatwoot.fullname" . -}}
-{{- end -}}
-{{- end -}}
-
-{{/*
-Set redis secretKey
-*/}}
-{{- define "chatwoot.redis.secretKey" -}}
-{{- if .Values.redis.enabled -}}
-"redis-password"
-{{- else -}}
-{{- default "redis-password" .Values.redis.existingSecretPasswordKey | quote -}}
-{{- end -}}
-{{- end -}}
-
-{{/*
-Set redis port
-*/}}
-{{- define "chatwoot.redis.port" -}}
-{{- if .Values.redis.enabled -}}
-    6379
-{{- else -}}
+{{- define "chatwoot.cache.port" -}}
 {{- default 6379 .Values.redis.port -}}
 {{- end -}}
-{{- end -}}
 
-{{/*
-Set redis password
-*/}}
-{{- define "chatwoot.redis.password" -}}
+{{- define "chatwoot.cache.password" -}}
 {{- if .Values.redis.enabled -}}
 {{- default "redis" .Values.redis.auth.password -}}
 {{- else -}}
@@ -188,19 +113,18 @@ Set redis password
 {{- end -}}
 {{- end -}}
 
-{{/*
-Set redis URL
-*/}}
-{{- define "chatwoot.redis.url" -}}
+{{- define "chatwoot.cache.url" -}}
 {{- if .Values.redis.enabled -}}
-    redis://:{{ .Values.redis.auth.password }}@{{ template "chatwoot.redis.host" . }}:{{ template "chatwoot.redis.port" . }}
-{{- else if .Values.env.REDIS_TLS -}}
-    rediss://:$(REDIS_PASSWORD)@{{ .Values.redis.host }}:{{ .Values.redis.port }}
+    redis://:{{ include "chatwoot.cache.password" . }}@{{ include "chatwoot.cache.host" . }}:{{ include "chatwoot.cache.port" . }}
 {{- else -}}
     redis://:$(REDIS_PASSWORD)@{{ .Values.redis.host }}:{{ .Values.redis.port }}
 {{- end -}}
 {{- end -}}
-{{- define "chatwoot.podCommon" -}}
+
+{{/*
+Composition Modules
+*/}}
+{{- define "chatwoot.pod.common" -}}
 {{- with .Values.imagePullSecrets }}
 imagePullSecrets:
   {{- toYaml . | nindent 2 }}
@@ -225,24 +149,24 @@ volumes:
     emptyDir: {}
 {{- end -}}
 
-{{- define "chatwoot.envCommon" -}}
+{{- define "chatwoot.env.common" -}}
 {{- if .Values.postgresql.auth.existingSecret }}
 - name: POSTGRES_PASSWORD
   valueFrom:
     secretKeyRef:
       name: {{ .Values.postgresql.auth.existingSecret }}
-      key: {{ default "password" .Values.postgresql.auth.secretKeys.adminPasswordKey }}
+      key: {{ default "password" .Values.postgresql.auth.secretKeys.adminPasswordKey | quote }}
 {{- end }}
 {{- if .Values.redis.auth.existingSecret }}
 - name: REDIS_PASSWORD
   valueFrom:
     secretKeyRef:
       name: {{ .Values.redis.auth.existingSecret }}
-      key: {{ default "password" .Values.redis.auth.existingSecretPasswordKey }}
+      key: {{ default "password" .Values.redis.auth.existingSecretPasswordKey | quote }}
 {{- end }}
 envFrom:
   - secretRef:
-      name: {{ template "chatwoot.fullname" . }}-env
+      name: {{ include "chatwoot.full" . }}-env
   {{- if .Values.existingEnvSecret }}
   - secretRef:
       name: {{ .Values.existingEnvSecret }}

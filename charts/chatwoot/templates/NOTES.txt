@@ -6,8 +6,8 @@ To get the application URL:
 {{- if .Values.ingress.enabled }}
   http{{ if .Values.ingress.tls }}s{{ end }}://{{ (index .Values.ingress.hosts 0).host }}
 {{- else }}
-  You can access it via the service: {{ template "chatwoot.fullname" . }}
+  You can access it via the service: {{ include "chatwoot.full" . }}
 {{- end }}
 
 To monitor your pods:
-  $ kubectl get pods -l {{- include "chatwoot.selectorLabels" . | nindent 4 }}
+  $ kubectl get pods -l {{- include "chatwoot.selector" . | nindent 4 }}

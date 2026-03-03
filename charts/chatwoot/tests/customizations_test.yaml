@@ -1,8 +1,8 @@
 suite: test local customizations
 templates:
-  - web-deployment.yaml
-  - worker-deployment.yaml
-  - hpa.yaml
+  - deployment.web.yaml
+  - deployment.worker.yaml
+  - policy.hpa.yaml
   - values.yaml
   - Chart.yaml
 release:
@@ -12,14 +12,14 @@ tests:
   - it: should have fullnameOverride applied
     set:
       fullnameOverride: "chatwoot"
-    template: web-deployment.yaml
+    template: deployment.web.yaml
     asserts:
       - equal:
           path: metadata.name
           value: chatwoot-web
 
   - it: should have worker affinity by default
-    template: web-deployment.yaml
+    template: deployment.web.yaml
     asserts:
       - exists:
           path: spec.template.spec.affinity.nodeAffinity.requiredDuringSchedulingIgnoredDuringExecution.nodeSelectorTerms[0].matchExpressions[0]
@@ -28,7 +28,7 @@ tests:
           value: worker
 
   - it: should have topologySpreadConstraints for HA
-    template: web-deployment.yaml
+    template: deployment.web.yaml
     set:
       topologySpreadConstraints:
         - maxSkew: 1
@@ -58,7 +58,7 @@ tests:
           maxpods: 6
           cputhreshold: 70
           memorythreshold: 70
-    template: hpa.yaml
+    template: policy.hpa.yaml
     asserts:
       - hasDocuments:
           count: 2

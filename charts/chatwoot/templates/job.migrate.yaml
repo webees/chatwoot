@@ -1,40 +1,38 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: "{{ template "chatwoot.fullname" . }}-migrate"
+  name: "{{ include "chatwoot.full" . }}-migrate"
   labels:
     {{- include "chatwoot.labels" . | nindent 4 }}
   annotations:
-    # This is what defines this resource as a hook. Without this line, the
-    # job is considered part of the release.
-    "helm.sh/hook": {{ .Values.hooks.migrate.hookAnnotation }}
+    "helm.sh/hook": {{ .Values.hooks.migrate.hookAnnotation | quote }}
     "helm.sh/hook-delete-policy": "hook-succeeded,before-hook-creation"
     "helm.sh/hook-weight": "-1"
 spec:
   template:
     spec:
-      {{- include "chatwoot.podCommon" . | nindent 6 }}
+      {{- include "chatwoot.pod.common" . | nindent 6 }}
       restartPolicy: Never
       initContainers:
-      - name: init-postgres
+      - name: init-db
         image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
         imagePullPolicy: {{ .Values.image.pullPolicy }}
         command: ["/bin/sh"]
         args:
           - -c
           - >-
-            PG_READY="pg_isready -h {{ template "chatwoot.postgresql.host" . }} -p {{ template "chatwoot.postgresql.port" . }}";
-            until $PG_READY;
+            DB_READY="pg_isready -h {{ include "chatwoot.db.host" . }} -p {{ include "chatwoot.db.port" . }}";
+            until $DB_READY;
             do
               sleep 2;
             done;
             echo "Database ready to accept connections."  ;
-      - name: init-redis
+      - name: init-cache
         image: busybox:1.28
         imagePullPolicy: {{ .Values.image.pullPolicy }}
-        command: ["sh", "-c", "until nslookup {{ template "chatwoot.redis.host" . }} ; do echo waiting for {{ template "chatwoot.redis.host" . }} ; sleep 2; done;"]
+        command: ["sh", "-c", "until nslookup {{ include "chatwoot.cache.host" . }} ; do echo waiting for {{ include "chatwoot.cache.host" . }} ; sleep 2; done;"]
       containers:
-      - name: "db-migrate-job"
+      - name: migrate
         image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
         args:
         - bundle
@@ -42,7 +40,7 @@ spec:
         - rails
         - db:chatwoot_prepare
         env:
-        {{- include "chatwoot.envCommon" . | nindent 8 }}
+        {{- include "chatwoot.env.common" . | nindent 8 }}
         imagePullPolicy: {{ .Values.image.pullPolicy }}
         volumeMounts:
             - name: cache

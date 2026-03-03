@@ -1,0 +1,23 @@
+suite: test cache (redis) configuration
+templates:
+  - deployment.web.yaml
+tests:
+  - it: should use memory storage for cache by default
+    template: deployment.web.yaml
+    asserts:
+      - equal:
+          path: spec.template.spec.volumes[0].name
+          value: cache
+      - equal:
+          path: spec.template.spec.volumes[0].emptyDir
+          value: {}
+
+  - it: should point to redis standalone master by default
+    template: deployment.web.yaml
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: REDIS_URL
+            value: redis://:redis@chatwoot-release-chatwoot-redis-master:6379
+          any: true
