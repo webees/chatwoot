@@ -12,7 +12,11 @@ spec:
     matchLabels:
       {{- include "chatwoot.selector" . | nindent 6 }}
       role: worker
-  strategy: {type: RollingUpdate, rollingUpdate: {maxUnavailable: 0, maxSurge: 1}}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
   template:
     metadata:
       labels:
@@ -31,8 +35,13 @@ spec:
             {{- include "chatwoot.env.common" . | nindent 12 }}
           envFrom:
             {{- include "chatwoot.envFrom.common" . | nindent 12 }}
-          volumeMounts: [{name: cache, mountPath: /app/tmp}]
+          volumeMounts:
+            - name: cache
+              mountPath: /app/tmp
           {{- with .Values.worker.resources }}
-          resources: {{ toYaml . | nindent 12 }}
+          resources:
+            {{- toYaml . | nindent 12 }}
           {{- end }}
-      securityContext: {runAsNonRoot: true, runAsUser: 1000}
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
