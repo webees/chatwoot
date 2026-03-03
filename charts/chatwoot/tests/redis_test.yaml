@@ -1,0 +1,19 @@
+suite: test redis standalone configuration
+templates:
+  - values.yaml
+  - _helpers.tpl
+tests:
+  - it: should verify redis host points to master service
+    template: web-deployment.yaml
+    set:
+      redis:
+        enabled: true
+        nameOverride: "chatwoot-redis"
+      fullnameOverride: "chatwoot"
+    asserts:
+      # We check the environment variable SECRET chatwoot-env which is composed in env-secret.yaml
+      # but easier to check if we trust the logic in env-secret.yaml, 
+      # or we can test env-secret.yaml directly.
+      - matchRegex:
+          path: spec.template.spec.containers[0].envFrom[0].secretRef.name
+          pattern: chatwoot-env
