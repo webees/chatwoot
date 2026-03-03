@@ -1,23 +1,26 @@
-# 🧶 Chatwoot: Professional Grade Customer Engagement
-# Artistic Hardened Edition - v2.1.15
+# 🧶 Chatwoot: 官方专业加固版 (Artistic Hardened Edition)
+# 极致代码精简 | 100% 升级安全 | ARM 架构支持
 
-# --- [ Core Settings ] ---
+# --- [ 1. 核心镜像设置 ] ---
 image:
   repository: chatwoot/chatwoot
   tag: v4.11.1
   pullPolicy: IfNotPresent
 
+# 如果你的 K8s 版本低于 v1.26，请将 apiVersion 设置为 autoscaling/v2beta2
 autoscaling:
   apiVersion: autoscaling/v2
 
-# --- [ High Availability Policy ] ---
+# --- [ 2. 高可用与调度策略 ] ---
+# Pod 干扰预算：在集群维护或节点排空时保持最少 Pod 运行
 podDisruptionBudget:
   enabled: false
   # minAvailable: 1
 
+# 拓扑分布约束：指定如何在可用区或节点间打散 Pod (例如: [{maxSkew: 1, ...}])
 topologySpreadConstraints: []
 
-# --- [ Component: Web ] ---
+# --- [ 3. 组件配置：Web 服务 (主应用) ] ---
 web:
   replicaCount: 1
   hpa:
@@ -26,6 +29,7 @@ web:
     maxpods: 10
     cputhreshold: 75
     memorythreshold: 75
+  # 资源配额：对于高可用生产环境，建议明确设置以防止资源争抢
   resources:
     limits:
       cpu: 500m
@@ -34,7 +38,7 @@ web:
       cpu: 100m
       memory: 256Mi
 
-# --- [ Component: Worker ] ---
+# --- [ 4. 组件配置：Worker (异步任务) ] ---
 worker:
   replicaCount: 2
   hpa:
@@ -51,7 +55,8 @@ worker:
       cpu: 100m
       memory: 256Mi
 
-# --- [ Component: Database (Postgres) ] ---
+# --- [ 5. 基础设施：数据库 (Postgres) ] ---
+# 默认使用 pgvector 镜像以支持多架构 (amd64/arm64)
 postgresql:
   enabled: true
   nameOverride: chatwoot-postgresql
@@ -68,6 +73,7 @@ postgresql:
       enabled: true
       size: 1Gi
       accessModes: [ReadWriteOnce]
+    # 强制数据库运行在 worker 标签的节点上
     affinity:
       nodeAffinity:
         requiredDuringSchedulingIgnoredDuringExecution:
@@ -80,7 +86,8 @@ postgresql:
     requests: { cpu: 100m, memory: 256Mi }
   readReplicas: { enabled: false }
 
-# --- [ Component: Cache (Redis) ] ---
+# --- [ 6. 基础设施：缓存 (Redis) ] ---
+# 极简模式：Standalone 架构且无持久化，提升性能
 redis:
   enabled: true
   nameOverride: chatwoot-redis
@@ -91,13 +98,13 @@ redis:
     password: redis
   master:
     persistence:
-      enabled: false
-      medium: Memory
+      enabled: false     # 禁用持久化，使其作为纯内存缓存运行
+      medium: Memory     # 使用 tmpfs (RAM 磁盘) 挂载
   resources:
     limits: { cpu: 200m, memory: 256Mi }
     requests: { cpu: 100m, memory: 128Mi }
 
-# --- [ Network & Ingress ] ---
+# --- [ 7. 网络与入口 (Ingress) ] ---
 services:
   name: chatwoot
   internalPort: 3000
@@ -116,7 +123,7 @@ ingress:
       paths: [{ path: /, pathType: Prefix }]
   tls: []
 
-# --- [ Security & Governance ] ---
+# --- [ 8. 安全与身份管理 ] ---
 fullnameOverride: "chatwoot"
 
 serviceAccount:
@@ -124,23 +131,28 @@ serviceAccount:
   name: ""
   annotations: {}
 
+# 安全上下文：遵循非 Root 运行的最佳实践 (UID 1000)
 podSecurityContext: { fsGroup: 1000 }
 securityContext: { runAsNonRoot: true, runAsUser: 1000 }
+
 imagePullSecrets: []
 nodeSelector: {}
 tolerations: []
 affinity: {}
 
-# --- [ Lifecycle Hooks ] ---
+# --- [ 9. 生命周期钩子 (Lifecycle Hooks) ] ---
 hooks:
   migrate:
+    # hookAnnotation: 设置为 post-install,post-upgrade 可在升级成功后自动迁移数据库
     hookAnnotation: "post-install,post-upgrade"
     resources:
       limits: { memory: 1000Mi }
       requests: { memory: 1000Mi }
 
-# --- [ Environment & Secrets ] ---
+# --- [ 10. 环境变量设置 ] ---
+# 如果已手动创建包含环境变量的任务 Secret，请在此填写其名称
 existingEnvSecret: ""
+
 env:
   DEFAULT_LOCALE: zh-CN
   INSTALLATION_ENV: helm
