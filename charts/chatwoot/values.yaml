@@ -54,7 +54,7 @@ postgresql:
 redis:
   enabled: true
   architecture: standalone
-  image: { tag: 6.2 }
+  image: { registry: docker.io, repository: library/redis, tag: "7.4" }
   auth: { password: redis }
   master:
     persistence: { enabled: false, medium: Memory }
