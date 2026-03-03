@@ -1,7 +1,7 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: "{{ .Release.Name }}-migrate"
+  name: "{{ template "chatwoot.fullname" . }}-migrate"
   labels:
     app: {{ template "chatwoot.fullname" . }}
     chart: "{{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}"
