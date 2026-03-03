@@ -4,19 +4,39 @@ kind: NetworkPolicy
 apiVersion: networking.k8s.io/v1
 metadata:
   name: {{ include "chatwoot.full" . }}-boundary
-  labels: {{ include "chatwoot.labels" . | nindent 4 }}
+  labels:
+    {{- include "chatwoot.labels" . | nindent 4 }}
 spec:
-  podSelector: { matchLabels: { {{ include "chatwoot.selector" . }} } }
-  policyTypes: [Ingress, Egress]
+  podSelector:
+    matchLabels:
+      {{- include "chatwoot.selector" . | nindent 6 }}
+  policyTypes:
+    - Ingress
+    - Egress
   ingress:
-    - from: [{ podSelector: { matchLabels: { {{ include "chatwoot.selector" . }} } } }]
+    - from:
+        - podSelector:
+            matchLabels:
+              {{- include "chatwoot.selector" . | nindent 14 }}
     - from: []
-      ports: [{ protocol: TCP, port: {{ .Values.services.internalPort }} }]
+      ports:
+        - protocol: TCP
+          port: {{ .Values.services.internalPort }}
   egress:
-    - to: [{ podSelector: { matchLabels: { app.kubernetes.io/name: {{ include "chatwoot.name" . }} } } }]
-    - to: [{ ports: [{ protocol: UDP, port: 53 }, { protocol: TCP, port: 53 }] }]
+    - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: {{ include "chatwoot.name" . }}
+    - to:
+        - ports:
+            - protocol: UDP
+              port: 53
+            - protocol: TCP
+              port: 53
     {{- if .Values.networkPolicy.allowExternalEgress }}
-    - to: [{ ipBlock: { cidr: 0.0.0.0/0 } }]
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
     {{- end }}
 {{- end }}
 ---
@@ -27,10 +47,14 @@ apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
   name: {{ include "chatwoot.full" $ }}-{{ $role }}
-  labels: {{ include "chatwoot.labels" $ | nindent 4 }}
+  labels:
+    {{- include "chatwoot.labels" $ | nindent 4 }}
 spec:
   minAvailable: {{ default 1 $.Values.podDisruptionBudget.minAvailable }}
-  selector: { matchLabels: { {{ include "chatwoot.selector" $ }}, role: {{ $role }} } }
+  selector:
+    matchLabels:
+      {{- include "chatwoot.selector" $ | nindent 6 }}
+      role: {{ $role }}
 ---
 {{- end }}
 {{- end }}
@@ -43,14 +67,22 @@ apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
   name: {{ include "chatwoot.full" $ }}-{{ $role }}
-  labels: {{ include "chatwoot.labels" $ | nindent 4 }}
+  labels:
+    {{- include "chatwoot.labels" $ | nindent 4 }}
 spec:
-  scaleTargetRef: {apiVersion: apps/v1, kind: Deployment, name: {{ include "chatwoot.full" $ }}-{{ $role }} }
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ include "chatwoot.full" $ }}-{{ $role }}
   minReplicas: {{ $cfg.hpa.minpods }}
   maxReplicas: {{ $cfg.hpa.maxpods }}
   metrics:
     - type: Resource
-      resource: { name: cpu, target: { type: Utilization, averageUtilization: {{ $cfg.hpa.cputhreshold }} } }
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: {{ $cfg.hpa.cputhreshold }}
 ---
 {{- end }}
 {{- end }}
@@ -62,15 +94,24 @@ apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
 metadata:
   name: {{ include "chatwoot.full" $ }}-{{ $role }}
-  labels: {{ include "chatwoot.labels" $ | nindent 4 }}
+  labels:
+    {{- include "chatwoot.labels" $ | nindent 4 }}
 spec:
-  targetRef: { apiVersion: apps/v1, kind: Deployment, name: {{ include "chatwoot.full" $ }}-{{ $role }} }
-  updatePolicy: { updateMode: {{ default "Auto" $.Values.vpa.updateMode | quote }} }
+  targetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ include "chatwoot.full" $ }}-{{ $role }}
+  updatePolicy:
+    updateMode: {{ default "Auto" $.Values.vpa.updateMode | quote }}
   resourcePolicy:
     containerPolicies:
       - containerName: {{ $role }}
-        minAllowed: { cpu: 50m, memory: 128Mi }
-        maxAllowed: { cpu: 1, memory: 2Gi }
+        minAllowed:
+          cpu: 50m
+          memory: 128Mi
+        maxAllowed:
+          cpu: 1
+          memory: 2Gi
 ---
 {{- end }}
 {{- end }}
