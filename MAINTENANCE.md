@@ -69,6 +69,33 @@ Official Chatwoot images for PostgreSQL dropped ARM support in 2025.
 
 ---
 
+## 🛡 Upgrade Safety & Atomic Rollback
+
+This chart is optimized for "Atomic" upgrades. If use the correct parameters, Kubernetes will automatically roll back to the previous version if the upgrade fails.
+
+### 1. How the safety net works:
+- **Zero-Downtime Strategy**: `web` and `worker` use `maxUnavailable: 0`. Kubernetes will keep old pods running until the new ones pass `readinessProbe` and `startupProbe`.
+- **Migration Barrier**: The `migrate` job runs as a `post-upgrade` hook. If migrations fail, the upgrade is marked as failed.
+- **Fail-Safe Probes**: We have aggressive `startupProbe` and `readinessProbe` to catch failing app versions early.
+
+### 2. Required Helm Command (CLI):
+```bash
+helm upgrade chatwoot ./charts/chatwoot \
+  --install \
+  --wait \
+  --atomic \
+  --timeout 10m
+```
+
+### 3. Rancher UI Configuration:
+When upgrading via Rancher:
+1. Go to **Upgrade** screen.
+2. Under **Helm Options**, ensure **"Wait"** is checked.
+3. Ensure **"Atomic"** (or **"Rollback on failure"**) is checked.
+4. Set **Timeout** to at least `600` seconds (migrations can take time).
+
+---
+
 ## ✅ Post-Upgrade Verification
 After syncing with upstream, always verify:
 1. `kubectl get pods -o wide`: Ensure Pods are running on `worker` labeled nodes.

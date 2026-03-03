@@ -15,7 +15,11 @@ spec:
       app: {{ template "chatwoot.fullname" . }}
       release: "{{ .Release.Name }}"
       role: web
-  strategy: {}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
   template:
     metadata:
       creationTimestamp: null
