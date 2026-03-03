@@ -1,0 +1,40 @@
+suite: test service and ingress connectivity
+templates:
+  - web.yaml
+  - ingress.yaml
+tests:
+  - it: should configuration service type correctly
+    set:
+      service:
+        type: NodePort
+        port: 8080
+    template: web.yaml
+    documentIndex: 1
+    asserts:
+      - equal:
+          path: spec.type
+          value: NodePort
+      - equal:
+          path: spec.ports[0].port
+          value: 8080
+
+  - it: should handle multiple ingress hosts correctly
+    set:
+      ingress:
+        enabled: true
+        hosts:
+          - host: chat.a.com
+            paths: [{path: /, pathType: Prefix}]
+          - host: chat.b.com
+            paths: [{path: /api, pathType: ImplementationSpecific}]
+    template: ingress.yaml
+    asserts:
+      - equal:
+          path: spec.rules[0].host
+          value: chat.a.com
+      - equal:
+          path: spec.rules[1].host
+          value: chat.b.com
+      - equal:
+          path: spec.rules[1].http.paths[0].path
+          value: /api

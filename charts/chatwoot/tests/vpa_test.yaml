@@ -5,11 +5,11 @@ tests:
   - it: should not render VPA by default
     set:
       vpa: { enabled: false }
+      networkPolicy: { enabled: false }
+      podDisruptionBudget: { enabled: false }
     asserts:
       - hasDocuments:
-          count: 0 # Assuming No other policies are enabled in default test values
-        # We need to be careful with other enabled policies. 
-        # Better to check specifically for the kind.
+          count: 0
 
   - it: should render VPA for both web and worker when enabled
     set:
@@ -32,4 +32,8 @@ tests:
       - equal:
           path: spec.resourcePolicy.containerPolicies[0].minAllowed.memory
           value: 128Mi
+        documentIndex: 0
+      - equal:
+          path: spec.updatePolicy.updateMode
+          value: "Auto"
         documentIndex: 0

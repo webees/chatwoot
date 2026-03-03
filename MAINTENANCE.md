@@ -2,6 +2,12 @@
 
 ### 🛠 维护记录 (Maintenance Log)
 
+#### v3.8.0 (2026-03-04) - 终极严密测试矩阵 (Ultimate Rigorous Testing)
+- **Edge Case Coverage**: 新增 `edge_case_test.yaml`，覆盖副本数溢出、空值注入等异常场景。
+- **Resource Discipline**: 新增 `resources_test.yaml`，确保 CPU/Mem 限制在各模式下严格对齐。
+- **Networking Logic**: 新增 `service_test.yaml`，验证大规模 Ingress 规则与 Service 类型的动态切换。
+- **Fix**: 彻底解决了 `storage_test` 中的模板跨文件依赖（checksum/config）导致的测试报错。
+
 #### v3.7.0 (2026-03-04) - 功能推导全深度验证
 - **Functional Coverage**: 新增 `storage_test.yaml` 与 `vpa_test.yaml`。
 - **Engine Analytics**: 首次实现了对“配置编程化”逻辑（S3/GCS 自动推导）的单元测试覆盖。
