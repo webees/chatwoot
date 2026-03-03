@@ -1,13 +1,15 @@
-Thank you for installing {{ .Chart.Name }}.
+感谢你安装 {{ .Chart.Name }}。
 
-Your release is named {{ .Release.Name }}.
+你的发布版本名称为：{{ .Release.Name }}。
 
-To get the application URL:
+获取应用访问地址：
 {{- if .Values.ingress.enabled }}
   http{{ if .Values.ingress.tls }}s{{ end }}://{{ (index .Values.ingress.hosts 0).host }}
 {{- else }}
-  You can access it via the service: {{ include "chatwoot.full" . }}
+  由于未启用 Ingress，你可以通过内网服务访问：{{ include "chatwoot.full" . }}
 {{- end }}
 
-To monitor your pods:
+监控你的 Pod 状态：
   $ kubectl get pods -l {{- include "chatwoot.selector" . | nindent 4 }}
+
+获取帮助文档和维护指南，请查看项目根目录下的 README.md 和 MAINTENANCE.md。

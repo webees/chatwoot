@@ -2,7 +2,7 @@ apiVersion: v2
 name: chatwoot
 version: 2.1.16
 appVersion: "v4.11.1"
-description: "Professional Hardened Chatwoot Chart: Minimalist, Secure, and HA-ready (Artistic Edition) 🔥💬"
+description: "Chatwoot 专业加固版：极简架构、安全至上、高可用就绪（艺术定制版）🔥💬"
 type: application
 keywords: [chatwoot, open-source, customer-support, crm, high-availability, hardened]
 
