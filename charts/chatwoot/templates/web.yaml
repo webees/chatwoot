@@ -41,9 +41,9 @@ spec:
           volumeMounts:
             - name: cache
               mountPath: /app/tmp
-          {{- with .Values.web.resources }}
+          {{- if and .Values.web.resources (gt (len .Values.web.resources) 0) }}
           resources:
-            {{- toYaml . | nindent 12 }}
+            {{- toYaml .Values.web.resources | nindent 12 }}
           {{- end }}
           livenessProbe:
             httpGet:
