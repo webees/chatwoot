@@ -89,17 +89,9 @@ affinity:
   {{- toYaml .Values.affinity | nindent 2 }}
   {{- else if .Values.global.affinity }}
   {{- toYaml .Values.global.affinity | nindent 2 }}
-  {{- else }}
-  nodeAffinity:
-    preferredDuringSchedulingIgnoredDuringExecution:
-      - weight: 100
-        preference:
-          matchExpressions:
-            - key: worker
-              operator: In
-              values:
-                - "true"
   {{- end }}
+nodeSelector:
+  worker: "true"
 serviceAccountName: {{ include "chatwoot.serviceAccountName" . }}
 volumes:
   - name: cache
