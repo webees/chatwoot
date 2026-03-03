@@ -1,16 +1,55 @@
-name: Release Charts
+name: CI/CD Pipeline
 
 on:
   push:
-    branches:
-      - main
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
 
 permissions:
   contents: write
 
 jobs:
-  release:
+  lint-test:
     runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: v3.17.0
+
+      - name: Add helm dependencies
+        run: |
+          helm repo add bitnami "https://charts.bitnami.com/bitnami"
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      - name: Set up chart-testing
+        uses: helm/chart-testing-action@v2.6.1
+
+      - name: Run chart-testing (lint)
+        run: |
+          helm dep build charts/chatwoot
+          ct lint --target-branch main
+
+      - name: Install helm-unittest
+        run: |
+          helm plugin install https://github.com/helm-unittest/helm-unittest --version v0.7.1
+
+      - name: Run unit tests
+        run: helm unittest charts/chatwoot
+
+  release:
+    needs: lint-test
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -34,28 +73,18 @@ jobs:
 
       - name: Auto-increment Chart version
         run: |
-          # 获取当前版本
           VERSION=$(yq eval '.version' charts/chatwoot/Chart.yaml)
-          echo "Current version: $VERSION"
-          
-          # 分解版本号 (Major.Minor.Patch)
           MAJOR=$(echo $VERSION | cut -d. -f1)
           MINOR=$(echo $VERSION | cut -d. -f2)
           PATCH=$(echo $VERSION | cut -d. -f3)
-          
-          # 增加修订号
           NEW_PATCH=$((PATCH + 1))
           NEW_VERSION="$MAJOR.$MINOR.$NEW_PATCH"
-          echo "New version: $NEW_VERSION"
           
-          # 写回文件
           yq eval ".version = \"$NEW_VERSION\"" -i charts/chatwoot/Chart.yaml
-          # 同时更新描述中的版本号
           yq eval ".description = (.description | sub(\"v[0-9.]+\", \"v$NEW_VERSION\"))" -i charts/chatwoot/Chart.yaml
           
-          # 提交并推送变更 (使用 [skip ci] 避免无限循环)
           git add charts/chatwoot/Chart.yaml
-          git commit -m "chore: auto-increment version to $NEW_VERSION [skip ci]"
+          git commit -m "chore: auto-increment version to $NEW_VERSION [skip ci]" || echo "No changes to commit"
           git push origin main
 
       - name: Run chart-releaser
