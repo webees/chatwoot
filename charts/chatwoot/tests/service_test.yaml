@@ -2,6 +2,7 @@ suite: test service and ingress connectivity
 templates:
   - web.yaml
   - ingress.yaml
+  - base.yaml # Required for checksum
 tests:
   - it: should configuration service type correctly
     set:

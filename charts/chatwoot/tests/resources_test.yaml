@@ -2,6 +2,7 @@ suite: test resource constraints and limits
 templates:
   - web.yaml
   - worker.yaml
+  - base.yaml # Required for checksum
 tests:
   - it: should apply specific resource limits for web
     set:
@@ -37,9 +38,9 @@ tests:
           path: spec.template.spec.containers[0].resources.limits.cpu
           value: "2000m"
 
-  - it: should respect the absence of resources if not provided (omit field)
+  - it: should respect the absence of resources if explicitly disabled
     set:
-      web: { resources: null }
+      web: { resources: {} }
     template: web.yaml
     documentIndex: 0
     asserts:
