@@ -44,9 +44,9 @@ tests:
       - equal:
           path: spec.rules[0].http.paths[0].backend.service.name
           value: chatwoot
-  - it: should default all pods to worker nodes
+  - it: should default all pods to worker nodes (Soft Affinity)
     template: job.migrate.yaml
     asserts:
       - equal:
-          path: spec.template.spec.nodeSelector.worker
-          value: "true"
+          path: spec.template.spec.affinity.nodeAffinity.preferredDuringSchedulingIgnoredDuringExecution[0].preference.matchExpressions[0].key
+          value: "worker"

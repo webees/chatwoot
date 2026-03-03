@@ -94,10 +94,40 @@ affinity:
               operator: In
               values:
                 - "true"
+    {{- if .Values.affinity }}
+    {{- if .Values.affinity.nodeAffinity }}
+    {{- with .Values.affinity.nodeAffinity.requiredDuringSchedulingIgnoredDuringExecution }}
+    requiredDuringSchedulingIgnoredDuringExecution:
+      {{- toYaml . | nindent 6 }}
+    {{- end }}
+    {{- end }}
+    {{- end }}
+    {{- if and (not .Values.affinity) .Values.global.affinity }}
+    {{- if .Values.global.affinity.nodeAffinity }}
+    {{- with .Values.global.affinity.nodeAffinity.requiredDuringSchedulingIgnoredDuringExecution }}
+    requiredDuringSchedulingIgnoredDuringExecution:
+      {{- toYaml . | nindent 6 }}
+    {{- end }}
+    {{- end }}
+    {{- end }}
   {{- if .Values.affinity }}
-  {{- toYaml .Values.affinity | nindent 2 }}
+  {{- if .Values.affinity.podAffinity }}
+  podAffinity:
+    {{- toYaml .Values.affinity.podAffinity | nindent 4 }}
+  {{- end }}
+  {{- if .Values.affinity.podAntiAffinity }}
+  podAntiAffinity:
+    {{- toYaml .Values.affinity.podAntiAffinity | nindent 4 }}
+  {{- end }}
   {{- else if .Values.global.affinity }}
-  {{- toYaml .Values.global.affinity | nindent 2 }}
+  {{- if .Values.global.affinity.podAffinity }}
+  podAffinity:
+    {{- toYaml .Values.global.affinity.podAffinity | nindent 4 }}
+  {{- end }}
+  {{- if .Values.global.affinity.podAntiAffinity }}
+  podAntiAffinity:
+    {{- toYaml .Values.global.affinity.podAntiAffinity | nindent 4 }}
+  {{- end }}
   {{- end }}
 serviceAccountName: {{ include "chatwoot.serviceAccountName" . }}
 volumes:
