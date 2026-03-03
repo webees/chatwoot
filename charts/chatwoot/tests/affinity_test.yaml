@@ -43,9 +43,13 @@ tests:
       - notExists:
           path: spec.template.spec.affinity.nodeAffinity
 
-  - it: should use default affinity from values.yaml if nothing else is provided
-    template: worker.yaml
+  - it: should default all pods to worker nodes (Soft Affinity)
+    template: web.yaml
     documentIndex: 0
     asserts:
-      - notExists: # Default in current values is empty
-          path: spec.template.spec.affinity
+      - equal:
+          path: spec.template.spec.affinity.nodeAffinity.preferredDuringSchedulingIgnoredDuringExecution[0].preference.matchExpressions[0].key
+          value: "worker"
+      - equal:
+          path: spec.template.spec.affinity.nodeAffinity.preferredDuringSchedulingIgnoredDuringExecution[0].weight
+          value: 100
