@@ -2,14 +2,12 @@ Thank you for installing {{ .Chart.Name }}.
 
 Your release is named {{ .Release.Name }}.
 
-To learn more about the release, try:
+To get the application URL:
+{{- if .Values.ingress.enabled }}
+  http{{ if .Values.ingress.tls }}s{{ end }}://{{ (index .Values.ingress.hosts 0).host }}
+{{- else }}
+  You can access it via the service: {{ template "chatwoot.fullname" . }}
+{{- end }}
 
-  $ helm status {{ .Release.Name }}
-  $ helm get all {{ .Release.Name }}
-
-NOTE: It may take a few minutes for the LoadBalancer IP to be available.
-You can watch the status by running 
-'kubectl get svc -w {{ template "chatwoot.fullname" . }}'
-
-export SERVICE_IP=$(kubectl get svc --namespace {{ .Release.Namespace }} {{ template "chatwoot.fullname" . }} -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
-echo http://$SERVICE_IP:{{ .Values.services.targetPort }}
+To monitor your pods:
+  $ kubectl get pods -l {{- include "chatwoot.selectorLabels" . | nindent 4 }}
