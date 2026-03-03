@@ -15,10 +15,10 @@ tests:
           path: spec.replicas
           value: 100
 
-  - it: should fallback to default (1) if replicaCount is missing in lite mode
+  - it: should default to 1 if replicaCount is omitted in lite mode
     set:
       global: { mode: lite }
-      web: { replicaCount: null }
+      web: {} # Omit replicaCount
     template: web.yaml
     documentIndex: 0
     asserts:
@@ -26,7 +26,7 @@ tests:
           path: spec.replicas
           value: 1
 
-  - it: should handle empty S3 credentials gracefully (should still render fields)
+  - it: should handle empty S3 credentials gracefully
     set:
       storage:
         type: s3
@@ -42,7 +42,7 @@ tests:
           path: spec.template.spec.containers[0].env
           content: { name: S3_ACCESS_KEY_ID, value: "" }
 
-  - it: should respect custom port configurations for both internal and target
+  - it: should respect custom port configurations
     set:
       services:
         internalPort: 8080

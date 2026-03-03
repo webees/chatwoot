@@ -1,0 +1,51 @@
+suite: test scheduling and affinity logic
+templates:
+  - web.yaml
+  - worker.yaml
+  - base.yaml
+tests:
+  - it: should respect global affinity if provided
+    set:
+      global:
+        affinity:
+          nodeAffinity:
+            requiredDuringSchedulingIgnoredDuringExecution:
+              nodeSelectorTerms:
+                - matchExpressions:
+                    - key: kubernetes.io/os
+                      operator: In
+                      values: ["linux"]
+    template: web.yaml
+    documentIndex: 0
+    asserts:
+      - equal:
+          path: spec.template.spec.affinity.nodeAffinity.requiredDuringSchedulingIgnoredDuringExecution.nodeSelectorTerms[0].matchExpressions[0].key
+          value: "kubernetes.io/os"
+
+  - it: should allow per-component affinity override
+    set:
+      global:
+        affinity: { nodeAffinity: { required: {} } }
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchExpressions:
+                  - key: app.kubernetes.io/name
+                    operator: In
+                    values: ["chatwoot"]
+              topologyKey: "kubernetes.io/hostname"
+    template: web.yaml
+    documentIndex: 0
+    asserts:
+      - exists:
+          path: spec.template.spec.affinity.podAntiAffinity
+      - notExists:
+          path: spec.template.spec.affinity.nodeAffinity
+
+  - it: should use default affinity from values.yaml if nothing else is provided
+    template: worker.yaml
+    documentIndex: 0
+    asserts:
+      - notExists: # Default in current values is empty
+          path: spec.template.spec.affinity
