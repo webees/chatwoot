@@ -1,128 +1,60 @@
-# 🧶 Chatwoot: 艺术级加固版 (Artistic Hardened Edition)
-# 极致代码精简 | 100% 升级安全 | 云原生进化
+# 🧶 Chatwoot: 极客进化版 (Geek v3.0)
+# 核心哲学：极简、原子、自愈
 
-# --- [ 0. 全局Profile设置 ] ---
-# 进化特性：通过 global.mode 自动调整环境，无需逐项配置
-# production: 自动开启 HPA、2 副本、高安全策略
-# lite: 单 Pod 运行，极致节省资源
+# --- [ 0. 全局 Profile ] ---
+# production: 高可用、双副本、强隔离
+# lite: 单 Pod 运行、低内存、开发模式
 global:
   mode: production
+  affinity: {} # 全局 Pod 亲和性，留空则使用默认调度
 
-# --- [ 1. 核心镜像设置 ] ---
-image:
-  repository: chatwoot/chatwoot
-  tag: v4.11.1
-  pullPolicy: IfNotPresent
+# --- [ 1. 核心镜像 ] ---
+image: { repository: chatwoot/chatwoot, tag: v4.11.1, pullPolicy: IfNotPresent }
 
-autoscaling:
-  apiVersion: autoscaling/v2
+# --- [ 2. 安全与策略控制 ] ---
+networkPolicy: { enabled: true, allowExternalEgress: true }
+podDisruptionBudget: { enabled: false, minAvailable: 1 }
 
-# --- [ 2. 网络安全策略 (New!) ] ---
-# 进化特性：零信任访问控制，限制 Pod 间非法通信
-networkPolicy:
-  enabled: true
-  allowExternalEgress: true  # 允许访问外部 S3/邮件服务器
-
-# --- [ 3. 高可用就绪策略 ] ---
-podDisruptionBudget:
-  enabled: false
-
-topologySpreadConstraints: []
-
-# --- [ 4. 组件配置：Web 服务 (主应用) ] ---
+# --- [ 3. 组件精控 (留空则使用模式默认值) ] ---
 web:
-  # replicaCount: 2  # 若不设置，将根据 global.mode 自动确定 (Lite:1, Prod:2)
-  hpa:
-    enabled: false
-    minpods: 1
-    maxpods: 10
-    cputhreshold: 75
-  resources:
-    limits: { cpu: 500m, memory: 512Mi }
-    requests: { cpu: 100m, memory: 256Mi }
+  # replicaCount: 1 # 手动覆盖模式默认副本数
+  resources: { limits: { cpu: 500m, memory: 512Mi }, requests: { cpu: 100m, memory: 256Mi } }
+  hpa: { enabled: false, minpods: 1, maxpods: 10, cputhreshold: 75 }
 
-# --- [ 5. 组件配置：Worker (异步任务) ] ---
 worker:
-  # replicaCount: 2  # 若不设置，将根据 global.mode 自动确定
-  hpa:
-    enabled: false
-    minpods: 1
-    maxpods: 10
-    cputhreshold: 75
-  resources:
-    limits: { cpu: 500m, memory: 512Mi }
-    requests: { cpu: 100m, memory: 256Mi }
+  resources: { limits: { cpu: 500m, memory: 512Mi }, requests: { cpu: 100m, memory: 256Mi } }
+  hpa: { enabled: false, minpods: 1, maxpods: 10, cputhreshold: 75 }
 
-# --- [ 6. 基础设施：数据库 (Postgres) ] ---
+# --- [ 4. 基础设施 (推荐使用 Operator，当前保留 Subchart 以兼容) ] ---
 postgresql:
   enabled: true
-  nameOverride: chatwoot-postgresql
-  image:
-    registry: docker.io
-    repository: pgvector/pgvector
-    tag: pg16
-  auth:
-    username: postgres
-    postgresPassword: postgres
-    database: chatwoot_production
+  image: { registry: docker.io, repository: pgvector/pgvector, tag: pg16 }
+  auth: { username: postgres, postgresPassword: postgres, database: chatwoot_production }
   primary:
-    persistence:
-      enabled: true
-      size: 1Gi
-      accessModes: [ReadWriteOnce]
-    affinity:
-      nodeAffinity:
-        requiredDuringSchedulingIgnoredDuringExecution:
-          nodeSelectorTerms:
-            - matchExpressions: [{ key: worker, operator: Exists }]
-  resources:
-    limits: { cpu: 500m, memory: 512Mi }
-    requests: { cpu: 100m, memory: 256Mi }
-  readReplicas: { enabled: false }
+    persistence: { enabled: true, size: 1Gi, accessModes: [ReadWriteOnce] }
+  resources: { limits: { memory: 512Mi }, requests: { memory: 256Mi } }
 
-# --- [ 7. 基础设施：缓存 (Redis) ] ---
 redis:
   enabled: true
-  nameOverride: chatwoot-redis
   architecture: standalone
   auth: { password: redis }
   master:
-    persistence:
-      enabled: false
-      medium: Memory
-  resources:
-    limits: { cpu: 200m, memory: 256Mi }
-    requests: { cpu: 100m, memory: 128Mi }
+    persistence: { enabled: false, medium: Memory }
+  resources: { limits: { memory: 256Mi }, requests: { memory: 128Mi } }
 
-# --- [ 8. 网络与入口 ] ---
-services:
-  name: chatwoot
-  internalPort: 3000
-  targetPort: 3000
-  type: LoadBalancer
-
-service: { type: ClusterIP, port: 80 }
-
+# --- [ 5. 网络接入 ] ---
+service: { type: LoadBalancer, port: 80 }
+services: { internalPort: 3000, targetPort: 3000 }
 ingress:
   enabled: false
   hosts: [{ host: "", paths: [{ path: /, pathType: Prefix }] }]
   tls: []
 
-# --- [ 9. 安全与元数据 ] ---
+# --- [ 6. 元数据与生命周期 ] ---
 fullnameOverride: "chatwoot"
-podSecurityContext: { fsGroup: 1000 }
-securityContext: { runAsNonRoot: true, runAsUser: 1000 }
-nodeSelector: {}
-tolerations: []
-affinity: {}
-
-# --- [ 10. 生命周期与环境 ] ---
+serviceAccount: { create: true }
 hooks:
-  migrate:
-    hookAnnotation: "post-install,post-upgrade"
-    resources:
-      limits: { memory: 1000Mi }
-      requests: { memory: 1000Mi }
+  migrate: { hookAnnotation: "post-install,post-upgrade" }
 
 env:
   DEFAULT_LOCALE: zh-CN
@@ -130,7 +62,4 @@ env:
   RAILS_ENV: production
   RAILS_LOG_TO_STDOUT: true
   SMTP_ADDRESS: smtp.gmail.com
-  SMTP_AUTHENTICATION: plain
-  SMTP_ENABLE_STARTTLS_AUTO: true
-  SMTP_OPENSSL_VERIFY_MODE: none
   SMTP_PORT: 587
