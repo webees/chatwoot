@@ -38,7 +38,14 @@ podDisruptionBudget: { enabled: false }
 postgresql:
   enabled: true
   image: { registry: docker.io, repository: pgvector/pgvector, tag: pg16 }
-  auth: { username: postgres, postgresPassword: postgres, database: chatwoot_production }
+  auth:
+    username: postgres
+    database: chatwoot_production
+    # 极客技巧：通过 existingSecret 引用现有密码，跳过 Bitnami 的升级校验报错
+    existingSecret: "chatwoot-2-1766892187-postgresql"
+    secretKeys:
+      adminPasswordKey: "postgres-password"
+      userPasswordKey: "postgres-password"
   primary:
     persistence: { enabled: true, size: 1Gi, accessModes: [ReadWriteOnce] }
   resources: { limits: { memory: 512Mi }, requests: { memory: 256Mi } }
