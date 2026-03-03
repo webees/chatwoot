@@ -1,5 +1,5 @@
-# 🧶 Chatwoot: 极客进化版 (Geek v3.2)
-# 核心哲学：极简、原子、自愈、智能配置
+# 🧶 Chatwoot: 极客进化版 (Geek v3.3)
+# 核心哲学：极简、原子、自愈、智能资源治理
 
 # --- [ 0. 全局模式 ] ---
 global:
@@ -8,20 +8,20 @@ global:
 # --- [ 1. 核心镜像 ] ---
 image: { repository: chatwoot/chatwoot, tag: v4.11.1, pullPolicy: IfNotPresent }
 
-# --- [ 2. 智能存储引擎 (v3.2 New!) ] ---
-# 极客进化：只需选择类型，系统自动生成对应的 10+ 个环境变量
+# --- [ 2. 智能资源治理 (v3.3 New!) ] ---
+# 极客进化：VPA 自动学习并调整 Web/Worker 的内存和 CPU 配额
+# 建议在集群中安装了 vpa-recommender 后开启
+vpa:
+  enabled: false
+  updateMode: "Auto" # 选项: Auto, Off (仅推荐), Recreate
+
+# --- [ 3. 智能存储引擎 ] ---
 storage:
   type: local # local | s3 | gcs
-  s3:
-    bucket: ""
-    region: ""
-    accessKeyId: ""
-    secretAccessKey: ""
-  gcs:
-    bucket: ""
-    project: ""
+  s3: { bucket: "", region: "", accessKeyId: "", secretAccessKey: "" }
+  gcs: { bucket: "", project: "" }
 
-# --- [ 3. 极简负载配置 ] ---
+# --- [ 4. 极简负载配置 ] ---
 web:
   resources: { limits: { cpu: 500m, memory: 512Mi }, requests: { cpu: 100m, memory: 256Mi } }
   hpa: { enabled: false, minpods: 1, maxpods: 10, cputhreshold: 75 }
@@ -30,11 +30,11 @@ worker:
   resources: { limits: { cpu: 500m, memory: 512Mi }, requests: { cpu: 100m, memory: 256Mi } }
   hpa: { enabled: false, minpods: 1, maxpods: 10, cputhreshold: 75 }
 
-# --- [ 4. 安全与流量治理 ] ---
+# --- [ 5. 安全与流量治理 ] ---
 networkPolicy: { enabled: true, allowExternalEgress: true }
 podDisruptionBudget: { enabled: false }
 
-# --- [ 5. 基础设施 ] ---
+# --- [ 6. 基础设施 ] ---
 postgresql:
   enabled: true
   image: { registry: docker.io, repository: pgvector/pgvector, tag: pg16 }
@@ -51,20 +51,19 @@ redis:
     persistence: { enabled: false, medium: Memory }
   resources: { limits: { memory: 256Mi }, requests: { memory: 128Mi } }
 
-# --- [ 6. 网络接入 ] ---
+# --- [ 7. 网络接入 ] ---
 service: { type: LoadBalancer, port: 80 }
 services: { internalPort: 3000, targetPort: 3000 }
 ingress:
   enabled: false
   hosts: [{ host: "", paths: [{ path: /, pathType: Prefix }] }]
 
-# --- [ 7. 元数据与生命周期 ] ---
+# --- [ 8. 元数据与生命周期 ] ---
 fullnameOverride: "chatwoot"
 serviceAccount: { create: true }
 hooks:
   migrate: { hookAnnotation: "post-install,post-upgrade" }
 
-# 扁平环境变量 (仅用于存放无法通过引擎推导的特殊变量)
 env:
   DEFAULT_LOCALE: zh-CN
   INSTALLATION_ENV: helm

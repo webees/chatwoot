@@ -10,7 +10,7 @@ spec:
   policyTypes: [Ingress, Egress]
   ingress:
     - from: [{ podSelector: { matchLabels: { {{ include "chatwoot.selector" . }} } } }]
-    - from: [] # 如有需要，允许基于通用 K8s 模式的入口流量（如监控）
+    - from: []
       ports: [{ protocol: TCP, port: {{ .Values.services.internalPort }} }]
   egress:
     - to: [{ podSelector: { matchLabels: { app.kubernetes.io/name: {{ include "chatwoot.name" . }} } } }]
@@ -51,6 +51,26 @@ spec:
   metrics:
     - type: Resource
       resource: { name: cpu, target: { type: Utilization, averageUtilization: {{ $cfg.hpa.cputhreshold }} } }
+---
+{{- end }}
+{{- end }}
+---
+{{/* --- [ 4. 垂直自动扩缩容 (VPA) - v3.3 New!] --- */}}
+{{- if .Values.vpa.enabled }}
+{{- range $role := list "web" "worker" }}
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: {{ include "chatwoot.full" $ }}-{{ $role }}
+  labels: {{ include "chatwoot.labels" $ | nindent 4 }}
+spec:
+  targetRef: { apiVersion: apps/v1, kind: Deployment, name: {{ include "chatwoot.full" $ }}-{{ $role }} }
+  updatePolicy: { updateMode: {{ default "Auto" $.Values.vpa.updateMode | quote }} }
+  resourcePolicy:
+    containerPolicies:
+      - containerName: {{ $role }}
+        minAllowed: { cpu: 50m, memory: 128Mi }
+        maxAllowed: { cpu: 1, memory: 2Gi }
 ---
 {{- end }}
 {{- end }}
