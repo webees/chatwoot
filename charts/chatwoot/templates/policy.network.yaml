@@ -1,0 +1,48 @@
+{{- if .Values.networkPolicy.enabled -}}
+kind: NetworkPolicy
+apiVersion: networking.k8s.io/v1
+metadata:
+  name: {{ include "chatwoot.full" . }}-boundary
+  labels:
+    {{- include "chatwoot.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "chatwoot.selector" . | nindent 6 }}
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    # 1. Allow Web traffic from Ingress
+    - from:
+        - podSelector:
+            matchLabels:
+              {{- include "chatwoot.selector" . | nindent 14 }}
+      ports:
+        - protocol: TCP
+          port: {{ .Values.services.internalPort }}
+    # 2. Allow Intra-cluster communication (Web <-> Worker via DB/Cache)
+    - from:
+        - podSelector:
+            matchLabels:
+              {{- include "chatwoot.selector" . | nindent 14 }}
+  egress:
+    # 1. Allow Access to DB/Cache (Internal or External)
+    - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: {{ include "chatwoot.name" . }}
+    # 2. Allow DNS resolution
+    - to:
+        - ports:
+            - protocol: UDP
+              port: 53
+            - protocol: TCP
+              port: 53
+    # 3. Allow Mail/S3 Access (External)
+    {{- if .Values.networkPolicy.allowExternalEgress }}
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+    {{- end }}
+{{- end }}

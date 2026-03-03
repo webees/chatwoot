@@ -1,5 +1,12 @@
-# 🧶 Chatwoot: 官方专业加固版 (Artistic Hardened Edition)
-# 极致代码精简 | 100% 升级安全 | ARM 架构支持
+# 🧶 Chatwoot: 艺术级加固版 (Artistic Hardened Edition)
+# 极致代码精简 | 100% 升级安全 | 云原生进化
+
+# --- [ 0. 全局Profile设置 ] ---
+# 进化特性：通过 global.mode 自动调整环境，无需逐项配置
+# production: 自动开启 HPA、2 副本、高安全策略
+# lite: 单 Pod 运行，极致节省资源
+global:
+  mode: production
 
 # --- [ 1. 核心镜像设置 ] ---
 image:
@@ -7,56 +14,46 @@ image:
   tag: v4.11.1
   pullPolicy: IfNotPresent
 
-# 如果你的 K8s 版本低于 v1.26，请将 apiVersion 设置为 autoscaling/v2beta2
 autoscaling:
   apiVersion: autoscaling/v2
 
-# --- [ 2. 高可用与调度策略 ] ---
-# Pod 干扰预算：在集群维护或节点排空时保持最少 Pod 运行
+# --- [ 2. 网络安全策略 (New!) ] ---
+# 进化特性：零信任访问控制，限制 Pod 间非法通信
+networkPolicy:
+  enabled: true
+  allowExternalEgress: true  # 允许访问外部 S3/邮件服务器
+
+# --- [ 3. 高可用就绪策略 ] ---
 podDisruptionBudget:
   enabled: false
-  # minAvailable: 1
 
-# 拓扑分布约束：指定如何在可用区或节点间打散 Pod (例如: [{maxSkew: 1, ...}])
 topologySpreadConstraints: []
 
-# --- [ 3. 组件配置：Web 服务 (主应用) ] ---
+# --- [ 4. 组件配置：Web 服务 (主应用) ] ---
 web:
-  replicaCount: 1
+  # replicaCount: 2  # 若不设置，将根据 global.mode 自动确定 (Lite:1, Prod:2)
   hpa:
     enabled: false
     minpods: 1
     maxpods: 10
     cputhreshold: 75
-    memorythreshold: 75
-  # 资源配额：对于高可用生产环境，建议明确设置以防止资源争抢
   resources:
-    limits:
-      cpu: 500m
-      memory: 512Mi
-    requests:
-      cpu: 100m
-      memory: 256Mi
+    limits: { cpu: 500m, memory: 512Mi }
+    requests: { cpu: 100m, memory: 256Mi }
 
-# --- [ 4. 组件配置：Worker (异步任务) ] ---
+# --- [ 5. 组件配置：Worker (异步任务) ] ---
 worker:
-  replicaCount: 2
+  # replicaCount: 2  # 若不设置，将根据 global.mode 自动确定
   hpa:
     enabled: false
-    minpods: 2
+    minpods: 1
     maxpods: 10
     cputhreshold: 75
-    memorythreshold: 75
   resources:
-    limits:
-      cpu: 500m
-      memory: 512Mi
-    requests:
-      cpu: 100m
-      memory: 256Mi
+    limits: { cpu: 500m, memory: 512Mi }
+    requests: { cpu: 100m, memory: 256Mi }
 
-# --- [ 5. 基础设施：数据库 (Postgres) ] ---
-# 默认使用 pgvector 镜像以支持多架构 (amd64/arm64)
+# --- [ 6. 基础设施：数据库 (Postgres) ] ---
 postgresql:
   enabled: true
   nameOverride: chatwoot-postgresql
@@ -73,85 +70,59 @@ postgresql:
       enabled: true
       size: 1Gi
       accessModes: [ReadWriteOnce]
-    # 强制数据库运行在 worker 标签的节点上
     affinity:
       nodeAffinity:
         requiredDuringSchedulingIgnoredDuringExecution:
           nodeSelectorTerms:
-            - matchExpressions:
-                - key: worker
-                  operator: Exists
+            - matchExpressions: [{ key: worker, operator: Exists }]
   resources:
     limits: { cpu: 500m, memory: 512Mi }
     requests: { cpu: 100m, memory: 256Mi }
   readReplicas: { enabled: false }
 
-# --- [ 6. 基础设施：缓存 (Redis) ] ---
-# 极简模式：Standalone 架构且无持久化，提升性能
+# --- [ 7. 基础设施：缓存 (Redis) ] ---
 redis:
   enabled: true
   nameOverride: chatwoot-redis
   architecture: standalone
-  image:
-    repository: bitnamilegacy/redis
-  auth:
-    password: redis
+  auth: { password: redis }
   master:
     persistence:
-      enabled: false     # 禁用持久化，使其作为纯内存缓存运行
-      medium: Memory     # 使用 tmpfs (RAM 磁盘) 挂载
+      enabled: false
+      medium: Memory
   resources:
     limits: { cpu: 200m, memory: 256Mi }
     requests: { cpu: 100m, memory: 128Mi }
 
-# --- [ 7. 网络与入口 (Ingress) ] ---
+# --- [ 8. 网络与入口 ] ---
 services:
   name: chatwoot
   internalPort: 3000
   targetPort: 3000
   type: LoadBalancer
 
-service:
-  type: ClusterIP
-  port: 80
+service: { type: ClusterIP, port: 80 }
 
 ingress:
   enabled: false
-  annotations: {}
-  hosts:
-    - host: ""
-      paths: [{ path: /, pathType: Prefix }]
+  hosts: [{ host: "", paths: [{ path: /, pathType: Prefix }] }]
   tls: []
 
-# --- [ 8. 安全与身份管理 ] ---
+# --- [ 9. 安全与元数据 ] ---
 fullnameOverride: "chatwoot"
-
-serviceAccount:
-  create: true
-  name: ""
-  annotations: {}
-
-# 安全上下文：遵循非 Root 运行的最佳实践 (UID 1000)
 podSecurityContext: { fsGroup: 1000 }
 securityContext: { runAsNonRoot: true, runAsUser: 1000 }
-
-imagePullSecrets: []
 nodeSelector: {}
 tolerations: []
 affinity: {}
 
-# --- [ 9. 生命周期钩子 (Lifecycle Hooks) ] ---
+# --- [ 10. 生命周期与环境 ] ---
 hooks:
   migrate:
-    # hookAnnotation: 设置为 post-install,post-upgrade 可在升级成功后自动迁移数据库
     hookAnnotation: "post-install,post-upgrade"
     resources:
       limits: { memory: 1000Mi }
       requests: { memory: 1000Mi }
-
-# --- [ 10. 环境变量设置 ] ---
-# 如果已手动创建包含环境变量的任务 Secret，请在此填写其名称
-existingEnvSecret: ""
 
 env:
   DEFAULT_LOCALE: zh-CN
