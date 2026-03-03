@@ -15,39 +15,40 @@ spec:
       {{- include "chatwoot.pod.common" . | nindent 6 }}
       restartPolicy: Never
       initContainers:
-      - name: init-db
-        image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
-        imagePullPolicy: {{ .Values.image.pullPolicy }}
-        command: ["/bin/sh"]
-        args:
-          - -c
-          - >-
-            DB_READY="pg_isready -h {{ include "chatwoot.db.host" . }} -p {{ include "chatwoot.db.port" . }}";
-            until $DB_READY;
-            do
-              sleep 2;
-            done;
-            echo "数据库已准备就绪，可以接收连接。" ;
-      - name: init-cache
-        image: busybox:1.28
-        imagePullPolicy: {{ .Values.image.pullPolicy }}
-        command: ["sh", "-c", "until nslookup {{ include "chatwoot.cache.host" . }} ; do echo 正在等待 {{ include "chatwoot.cache.host" . }} ; sleep 2; done;"]
+        - name: init-db
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command: ["/bin/sh"]
+          args:
+            - -c
+            - >-
+              DB_READY="pg_isready -h {{ include "chatwoot.db.host" . }} -p {{ include "chatwoot.db.port" . }}";
+              until $DB_READY;
+              do
+                sleep 2;
+              done;
+              echo "数据库已准备就绪，可以接收连接。" ;
+        - name: init-cache
+          image: busybox:1.28
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command: ["sh", "-c", "until nslookup {{ include "chatwoot.cache.host" . }} ; do echo 正在等待 {{ include "chatwoot.cache.host" . }} ; sleep 2; done;"]
       containers:
-      - name: migrate
-        image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
-        args:
-        - bundle
-        - exec
-        - rails
-        - db:chatwoot_prepare
-        env:
-          {{- include "chatwoot.env.common" . | nindent 10 }}
-        envFrom:
-          {{- include "chatwoot.envFrom.common" . | nindent 10 }}
-        imagePullPolicy: {{ .Values.image.pullPolicy }}
-        volumeMounts:
+        - name: migrate
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          args:
+            - bundle
+            - exec
+            - rails
+            - db:chatwoot_prepare
+          env:
+            {{- include "chatwoot.env.common" . | nindent 12 }}
+          envFrom:
+            {{- include "chatwoot.envFrom.common" . | nindent 12 }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          volumeMounts:
             - name: cache
               mountPath: /app/tmp
       {{- if .Values.securityContext }}
-      securityContext: {{ .Values.securityContext | toYaml | nindent 8 }}
+      securityContext:
+        {{- .Values.securityContext | toYaml | nindent 8 }}
       {{- end }}

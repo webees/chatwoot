@@ -21,17 +21,26 @@
 */}}
 {{- define "chatwoot.storage.env" -}}
 {{- if eq .Values.storage.type "s3" -}}
-- {name: ACTIVE_STORAGE_SERVICE, value: "s3"}
-- {name: S3_BUCKET_NAME, value: {{ .Values.storage.s3.bucket | quote }}}
-- {name: S3_REGION, value: {{ .Values.storage.s3.region | quote }}}
-- {name: S3_ACCESS_KEY_ID, value: {{ .Values.storage.s3.accessKeyId | quote }}}
-- {name: S3_SECRET_ACCESS_KEY, value: {{ .Values.storage.s3.secretAccessKey | quote }}}
+- name: ACTIVE_STORAGE_SERVICE
+  value: "s3"
+- name: S3_BUCKET_NAME
+  value: {{ .Values.storage.s3.bucket | quote }}
+- name: S3_REGION
+  value: {{ .Values.storage.s3.region | quote }}
+- name: S3_ACCESS_KEY_ID
+  value: {{ .Values.storage.s3.accessKeyId | quote }}
+- name: S3_SECRET_ACCESS_KEY
+  value: {{ .Values.storage.s3.secretAccessKey | quote }}
 {{- else if eq .Values.storage.type "gcs" -}}
-- {name: ACTIVE_STORAGE_SERVICE, value: "google"}
-- {name: GCS_BUCKET, value: {{ .Values.storage.gcs.bucket | quote }}}
-- {name: GCS_PROJECT, value: {{ .Values.storage.gcs.project | quote }}}
+- name: ACTIVE_STORAGE_SERVICE
+  value: "google"
+- name: GCS_BUCKET
+  value: {{ .Values.storage.gcs.bucket | quote }}
+- name: GCS_PROJECT
+  value: {{ .Values.storage.gcs.project | quote }}
 {{- else -}}
-- {name: ACTIVE_STORAGE_SERVICE, value: "local"}
+- name: ACTIVE_STORAGE_SERVICE
+  value: "local"
 {{- end -}}
 {{- end -}}
 
@@ -71,23 +80,40 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 
 {{/* 核心规范块 (Pod) */}}
 {{- define "chatwoot.pod.common" -}}
-{{- with .Values.imagePullSecrets }}imagePullSecrets: {{ toYaml . | nindent 2 }}{{ end }}
-{{- with (default .Values.affinity .Values.global.affinity) }}affinity: {{ toYaml . | nindent 2 }}{{ end }}
+{{- with .Values.imagePullSecrets }}
+imagePullSecrets:
+  {{- toYaml . | nindent 2 }}
+{{- end }}
+{{- with (default .Values.affinity .Values.global.affinity) }}
+affinity:
+  {{- toYaml . | nindent 2 }}
+{{- end }}
 serviceAccountName: {{ include "chatwoot.serviceAccountName" . }}
-volumes: [{name: cache, emptyDir: {}}]
+volumes:
+  - name: cache
+    emptyDir: {}
 {{- end -}}
 
 {{/* 环境变量块 */}}
 {{- define "chatwoot.env.common" -}}
 {{- include "chatwoot.storage.env" . }}
-{{- if .Values.postgresql.auth.existingSecret -}}
-- {name: POSTGRES_PASSWORD, valueFrom: {secretKeyRef: {name: {{ .Values.postgresql.auth.existingSecret }}, key: {{ default "password" .Values.postgresql.auth.secretKeys.adminPasswordKey | quote }}}}}
+{{- if .Values.postgresql.auth.existingSecret }}
+- name: POSTGRES_PASSWORD
+  valueFrom:
+    secretKeyRef:
+      name: {{ .Values.postgresql.auth.existingSecret | quote }}
+      key: {{ default "password" .Values.postgresql.auth.secretKeys.adminPasswordKey | quote }}
 {{- end }}
-{{- if .Values.redis.auth.existingSecret -}}
-- {name: REDIS_PASSWORD, valueFrom: {secretKeyRef: {name: {{ .Values.redis.auth.existingSecret }}, key: {{ default "password" .Values.redis.auth.existingSecretPasswordKey | quote }}}}}
+{{- if .Values.redis.auth.existingSecret }}
+- name: REDIS_PASSWORD
+  valueFrom:
+    secretKeyRef:
+      name: {{ .Values.redis.auth.existingSecret | quote }}
+      key: {{ default "password" .Values.redis.auth.existingSecretPasswordKey | quote }}
 {{- end }}
 {{- end -}}
 
 {{- define "chatwoot.envFrom.common" -}}
-- {secretRef: {name: "{{ include "chatwoot.full" . }}-env"}}
+- secretRef:
+    name: {{ printf "%s-env" (include "chatwoot.full" .) | quote }}
 {{- end -}}
