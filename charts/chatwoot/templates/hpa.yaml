@@ -1,0 +1,33 @@
+{{- range $component := list "web" "worker" }}
+{{- $config := index $.Values $component }}
+{{- if $config.hpa.enabled -}}
+apiVersion: {{ $.Values.autoscaling.apiVersion }}
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ template "chatwoot.fullname" $ }}-{{ $component }}
+  labels:
+    {{- include "chatwoot.labels" $ | nindent 4 }}
+    role: {{ $component }}
+spec:
+  scaleTargetRef:
+    kind: Deployment
+    apiVersion: apps/v1
+    name: {{ template "chatwoot.fullname" $ }}-{{ $component }}
+  minReplicas: {{ $config.hpa.minpods }}
+  maxReplicas: {{ $config.hpa.maxpods }}
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: {{ $config.hpa.cputhreshold }}
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: {{ $config.hpa.memorythreshold }}
+---
+{{- end }}
+{{- end }}

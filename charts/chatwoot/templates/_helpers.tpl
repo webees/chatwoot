@@ -200,3 +200,48 @@ Set redis URL
     redis://:$(REDIS_PASSWORD)@{{ .Values.redis.host }}:{{ .Values.redis.port }}
 {{- end -}}
 {{- end -}}
+{{- define "chatwoot.podCommon" -}}
+{{- with .Values.imagePullSecrets }}
+imagePullSecrets:
+  {{- toYaml . | nindent 2 }}
+{{- end }}
+{{- with .Values.tolerations }}
+tolerations:
+  {{- toYaml . | nindent 2 }}
+{{- end }}
+{{- if .Values.nodeSelector }}
+nodeSelector: {{- include "common.tplvalues.render" (dict "value" .Values.nodeSelector "context" $) | nindent 2 }}
+{{- end }}
+{{- if .Values.affinity }}
+affinity:
+  {{- toYaml .Values.affinity | nindent 2 }}
+{{- end }}
+{{- if .Values.topologySpreadConstraints }}
+topologySpreadConstraints:
+  {{- toYaml .Values.topologySpreadConstraints | nindent 2 }}
+{{- end }}
+{{- end -}}
+
+{{- define "chatwoot.envCommon" -}}
+{{- if .Values.postgresql.auth.existingSecret }}
+- name: POSTGRES_PASSWORD
+  valueFrom:
+    secretKeyRef:
+      name: {{ .Values.postgresql.auth.existingSecret }}
+      key: {{ default "password" .Values.postgresql.auth.secretKeys.adminPasswordKey }}
+{{- end }}
+{{- if .Values.redis.auth.existingSecret }}
+- name: REDIS_PASSWORD
+  valueFrom:
+    secretKeyRef:
+      name: {{ .Values.redis.auth.existingSecret }}
+      key: {{ default "password" .Values.redis.auth.existingSecretPasswordKey }}
+{{- end }}
+envFrom:
+  - secretRef:
+      name: {{ template "chatwoot.fullname" . }}-env
+  {{- if .Values.existingEnvSecret }}
+  - secretRef:
+      name: {{ .Values.existingEnvSecret }}
+  {{- end }}
+{{- end -}}

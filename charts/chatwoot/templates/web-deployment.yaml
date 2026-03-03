@@ -29,25 +29,7 @@ spec:
         {{- toYaml . | nindent 8 }}
         {{- end }}
     spec:
-      {{- with .Values.imagePullSecrets }}
-      imagePullSecrets:
-        {{- toYaml . | nindent 6 }}
-      {{- end }}
-      {{- with .Values.tolerations }}
-      tolerations:
-        {{- toYaml . | nindent 8 }}
-      {{- end }}
-      {{- if .Values.nodeSelector }}
-      nodeSelector: {{- include "common.tplvalues.render" (dict "value" .Values.nodeSelector "context" $) | nindent 8 }}
-      {{- end }}
-      {{- if .Values.affinity }}
-      affinity:
-        {{- toYaml .Values.affinity | nindent 8 }}
-      {{- end }}
-      {{- if .Values.topologySpreadConstraints }}
-      topologySpreadConstraints:
-        {{- toYaml .Values.topologySpreadConstraints | nindent 8 }}
-      {{- end }}
+      {{- include "chatwoot.podCommon" . | nindent 6 }}
       containers:
         - args:
             - bundle
@@ -61,27 +43,7 @@ spec:
           command:
             - docker/entrypoints/rails.sh
           env:
-          {{- if .Values.postgresql.auth.existingSecret }}
-          - name: POSTGRES_PASSWORD
-            valueFrom:
-              secretKeyRef:
-                name: {{ .Values.postgresql.auth.existingSecret }}
-                key: {{ default "password" .Values.postgresql.auth.secretKeys.adminPasswordKey }}
-          {{- end }}
-          {{- if .Values.redis.auth.existingSecret }}
-          - name: REDIS_PASSWORD
-            valueFrom:
-              secretKeyRef:
-                name: {{ .Values.redis.auth.existingSecret }}
-                key: {{ default "password" .Values.redis.auth.existingSecretPasswordKey }}
-          {{- end }}
-          envFrom:
-            - secretRef:
-                name: {{ template "chatwoot.fullname" . }}-env
-          {{- if .Values.existingEnvSecret }}
-            - secretRef:
-                name: {{ .Values.existingEnvSecret }}
-          {{- end }}
+          {{- include "chatwoot.envCommon" . | nindent 10 }}
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           name: {{ .Chart.Name }}-web
           ports:
