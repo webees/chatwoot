@@ -26,4 +26,4 @@ tests:
           path: spec.template.spec.containers[0].envFrom
           content:
             secretRef:
-              name: cw-chatwoot-env
+              name: chatwoot-env # Matches default fullnameOverride in values.yaml

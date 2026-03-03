@@ -2,6 +2,11 @@
 
 ### 🛠 维护记录 (Maintenance Log)
 
+#### v3.6.0 (2026-03-04) - 严苛 CI/CD 与自动化集成
+- **Workflow Consolidation**: 将 `Lint/Test` 与 `Release` 合并为单一流水线，引入 `needs` 依赖门禁。
+- **Safety Gate**: 确保 100% 单元测试通过后方可执行版本自增与发布。
+- **Version Automation**: 优化了 `yq` 脚本，实现版本号与 Chart 描述的同步自增。
+
 #### v3.5.0 (2026-03-04) - 安全增强与严苛测试
 - **Zero-Downtime**: 引入 `terminationGracePeriodSeconds` 与 `failureThreshold` 优化。
 - **Strict Testing**: 新增 `security_test.yaml`，覆盖零信任网络策略验证。
