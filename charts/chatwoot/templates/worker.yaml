@@ -38,7 +38,7 @@ spec:
           volumeMounts:
             - name: cache
               mountPath: /app/tmp
-          {{- if and .Values.worker.resources (gt (len .Values.worker.resources) 0) }}
+          {{- if .Values.worker.resources }}
           resources:
             {{- toYaml .Values.worker.resources | nindent 12 }}
           {{- end }}
