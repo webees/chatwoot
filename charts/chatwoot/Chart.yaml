@@ -1,8 +1,8 @@
 apiVersion: v2
 name: chatwoot
-version: 3.3.23
+version: 3.3.24
 appVersion: "v4.11.1"
-description: "Chatwoot 极客架构版：原子化重构、智能存储引擎、VPA 自动优化 (v3.3.23) ⚛️"
+description: "Chatwoot 极客架构版：原子化重构、智能存储引擎、VPA 自动优化 (v3.3.24) ⚛️"
 type: application
 keywords: [chatwoot, minimalism, geek, atomic, hardened]
 home: https://github.com/webees/chatwoot
