@@ -48,7 +48,7 @@ spec:
           volumeMounts:
             - name: cache
               mountPath: /app/tmp
-          {{- if and .Values.postgresql.resources (gt (len .Values.postgresql.resources) 0) }}
+          {{- if .Values.postgresql.resources }}
           resources:
             {{- toYaml .Values.postgresql.resources | nindent 12 }}
           {{- end }}

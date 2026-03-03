@@ -40,7 +40,7 @@ tests:
 
   - it: should respect the absence of resources if explicitly disabled
     set:
-      web: { resources: {} }
+      web: { resources: null }
     template: web.yaml
     documentIndex: 0
     asserts:
