@@ -1,7 +1,7 @@
 suite: test infrastructure stability
 templates:
   - job.migrate.yaml
-  - secret.env.yaml
+  - base.yaml
   - ingress.yaml
 tests:
   - it: should use pg16 for multi-arch (ARM) support
@@ -19,7 +19,7 @@ tests:
           pattern: "pg_isready -h chatwoot-release-chatwoot-postgresql -p 5432"
 
   - it: should render environment secret correctly
-    template: secret.env.yaml
+    template: base.yaml
     asserts:
       - equal:
           path: metadata.name

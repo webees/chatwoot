@@ -3,6 +3,7 @@ templates:
   - web.yaml
   - worker.yaml
   - policy.yaml
+  - base.yaml  # Required for checksum validation in web.yaml/worker.yaml
 release:
   name: chatwoot-release
   namespace: default

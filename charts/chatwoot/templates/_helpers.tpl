@@ -58,7 +58,9 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 
 {{/* 基础设施连接检测 */}}
 {{- define "chatwoot.db.host" -}}{{ if .Values.postgresql.enabled }}{{ printf "%s-postgresql" .Release.Name }}{{ else }}{{ .Values.postgresql.postgresqlHost }}{{ end }}{{ end -}}
+{{- define "chatwoot.db.port" -}}{{ default "5432" .Values.postgresql.postgresqlPort }}{{ end -}}
 {{- define "chatwoot.cache.host" -}}{{ if .Values.redis.enabled }}{{ printf "%s-redis-master" .Release.Name }}{{ else }}{{ .Values.redis.host }}{{ end }}{{ end -}}
+{{- define "chatwoot.cache.port" -}}{{ default "6379" .Values.redis.port }}{{ end -}}
 
 {{/* 核心定义块 (Pod & Env) */}}
 {{- define "chatwoot.pod.common" -}}
