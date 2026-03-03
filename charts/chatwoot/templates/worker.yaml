@@ -1,0 +1,35 @@
+{{/* --- [ Worker 任务单元: Deployment ] --- */}}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "chatwoot.full" . }}-worker
+  labels:
+    {{- include "chatwoot.labels" . | nindent 4 }}
+    role: worker
+spec:
+  replicas: {{ include "chatwoot.app.replicas" (dict "context" . "component" "worker") }}
+  selector:
+    matchLabels:
+      {{- include "chatwoot.selector" . | nindent 6 }}
+      role: worker
+  strategy: {type: RollingUpdate, rollingUpdate: {maxUnavailable: 0, maxSurge: 1}}
+  template:
+    metadata:
+      labels:
+        {{- include "chatwoot.selector" . | nindent 8 }}
+        role: worker
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/base.yaml") . | sha256sum }}
+    spec:
+      {{- include "chatwoot.pod.common" . | nindent 6 }}
+      containers:
+        - name: worker
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          args: [bundle, exec, sidekiq, -C, config/sidekiq.yml]
+          env: {{- include "chatwoot.env.common" . | nindent 12 }}
+          volumeMounts: [{name: cache, mountPath: /app/tmp}]
+          {{- with .Values.worker.resources }}
+          resources: {{ toYaml . | nindent 12 }}
+          {{- end }}
+      securityContext: {runAsNonRoot: true, runAsUser: 1000}
