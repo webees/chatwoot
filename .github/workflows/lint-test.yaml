@@ -40,7 +40,9 @@ jobs:
           fi
 
       - name: Run chart-testing (lint)
-        run: ct lint --target-branch main
+        run: |
+          helm dep build charts/chatwoot
+          ct lint --target-branch main
 
       - name: Install helm-unittest
         run: helm plugin install https://github.com/helm-unittest/helm-unittest
