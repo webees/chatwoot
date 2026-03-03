@@ -220,6 +220,9 @@ affinity:
 topologySpreadConstraints:
   {{- toYaml .Values.topologySpreadConstraints | nindent 2 }}
 {{- end }}
+volumes:
+  - name: cache
+    emptyDir: {}
 {{- end -}}
 
 {{- define "chatwoot.envCommon" -}}

@@ -4,16 +4,13 @@ metadata:
   name: {{ template "chatwoot.fullname" . }}-worker
   creationTimestamp: null
   labels:
-    app: {{ template "chatwoot.fullname" . }}
-    chart: "{{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}"
-    release: "{{ .Release.Name }}"
-    heritage: "{{ .Release.Service }}"
+    {{- include "chatwoot.labels" . | nindent 4 }}
+    role: worker
 spec:
   replicas: {{ int .Values.worker.replicaCount }}
   selector:
     matchLabels:
-      app: {{ template "chatwoot.fullname" . }}
-      release: "{{ .Release.Name }}"
+      {{- include "chatwoot.selectorLabels" . | nindent 6 }}
       role: worker
   strategy:
     type: RollingUpdate
@@ -24,8 +21,7 @@ spec:
     metadata:
       creationTimestamp: null
       labels:
-        app: {{ template "chatwoot.fullname" . }}
-        release: "{{ .Release.Name }}"
+        {{- include "chatwoot.selectorLabels" . | nindent 8 }}
         role: worker
       annotations:
         checksum/config: {{ include (print $.Template.BasePath "/env-secret.yaml") . | sha256sum }}
@@ -44,7 +40,7 @@ spec:
           env:
           {{- include "chatwoot.envCommon" . | nindent 10 }}
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
-          name: {{ .Chart.Name }}-workers
+          name: worker
           {{- with .Values.worker.resources }}
           resources:
             {{- toYaml . | nindent 12 }}
@@ -57,7 +53,4 @@ spec:
       {{- if .Values.securityContext }}
       securityContext: {{ .Values.securityContext | toYaml | nindent 8 }}
       {{- end }}
-      volumes:
-        - name: cache
-          emptyDir: {}
 
