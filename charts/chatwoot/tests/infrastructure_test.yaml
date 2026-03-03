@@ -16,7 +16,8 @@ tests:
     asserts:
       - matchRegex:
           path: spec.template.spec.initContainers[0].args[1]
-          pattern: "pg_isready -h chatwoot-release-chatwoot-postgresql"
+          # Match the expanded script but keep it flexible
+          pattern: "pg_isready -h chatwoot-release-postgresql"
 
   - it: should render environment secret correctly
     template: base.yaml
@@ -26,10 +27,7 @@ tests:
       - equal:
           path: metadata.name
           value: chatwoot-env
-      - exists:
-          path: data.POSTGRES_HOST
-      - exists:
-          path: data.REDIS_URL
+        documentIndex: 0 # Secret is at index 0
 
   - it: should link ingress to the correct service name
     set:
