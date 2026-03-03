@@ -2,6 +2,11 @@
 
 ### 🛠 维护记录 (Maintenance Log)
 
+#### v3.9.0 (2026-03-04) - 基础设施优化与镜像精简
+- **Scheduling Discipline**: 为 PostgreSQL 增加 `nodeSelector: { worker: "true" }`，确保数据库运行在专有工作节点。
+- **Image Minimalism**: 精简了 Redis 镜像配置，使用 `6.2` 替代复杂的 Bitnami 全量标签。
+- **Maintenance**: 保持了对终极测试矩阵的 100% 兼容性。
+
 #### v3.8.0 (2026-03-04) - 终极严密测试矩阵 (Ultimate Rigorous Testing)
 - **Edge Case Coverage**: 新增 `edge_case_test.yaml`，覆盖副本数溢出、空值注入等异常场景。
 - **Resource Discipline**: 新增 `resources_test.yaml`，确保 CPU/Mem 限制在各模式下严格对齐。

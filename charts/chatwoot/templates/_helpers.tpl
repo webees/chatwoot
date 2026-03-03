@@ -91,6 +91,8 @@ affinity:
 affinity:
   {{- toYaml .Values.global.affinity | nindent 2 }}
 {{- end }}
+nodeSelector:
+  worker: "true"
 serviceAccountName: {{ include "chatwoot.serviceAccountName" . }}
 volumes:
   - name: cache

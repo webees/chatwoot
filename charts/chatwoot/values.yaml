@@ -48,14 +48,19 @@ postgresql:
       userPasswordKey: "postgres-password"
   primary:
     persistence: { enabled: true, size: 1Gi, accessModes: [ReadWriteOnce] }
+    nodeSelector: { worker: "true" }
   resources: { limits: { memory: 512Mi }, requests: { memory: 256Mi } }
 
 redis:
   enabled: true
   architecture: standalone
+  image: { tag: 6.2 }
   auth: { password: redis }
   master:
     persistence: { enabled: false, medium: Memory }
+    nodeSelector: { worker: "true" }
+  replica:
+    nodeSelector: { worker: "true" }
   resources: { limits: { memory: 256Mi }, requests: { memory: 128Mi } }
 
 # --- [ 7. 网络接入 ] ---
