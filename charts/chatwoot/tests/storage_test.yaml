@@ -1,6 +1,7 @@
 suite: test smart storage engine
 templates:
   - web.yaml
+  - base.yaml # Required for checksum calculation in web.yaml
 tests:
   - it: should generate S3 environment variables correctly
     set:
@@ -11,6 +12,8 @@ tests:
           region: us-east-1
           accessKeyId: AKIA_TEST
           secretAccessKey: SECRET_TEST
+    template: web.yaml
+    documentIndex: 0
     asserts:
       - contains:
           path: spec.template.spec.containers[0].env
@@ -29,6 +32,8 @@ tests:
         gcs:
           bucket: gcs-bucket
           project: gcs-project
+    template: web.yaml
+    documentIndex: 0
     asserts:
       - contains:
           path: spec.template.spec.containers[0].env
@@ -40,6 +45,8 @@ tests:
   - it: should default to local storage
     set:
       storage: { type: local }
+    template: web.yaml
+    documentIndex: 0
     asserts:
       - contains:
           path: spec.template.spec.containers[0].env

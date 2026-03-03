@@ -1,0 +1,59 @@
+suite: test extreme edge cases and input validation
+templates:
+  - web.yaml
+  - worker.yaml
+  - base.yaml
+tests:
+  - it: should handle extremely high replica counts via profiles
+    set:
+      global: { mode: production }
+      web: { replicaCount: 100 }
+    template: web.yaml
+    documentIndex: 0
+    asserts:
+      - equal:
+          path: spec.replicas
+          value: 100
+
+  - it: should fallback to default (1) if replicaCount is missing in lite mode
+    set:
+      global: { mode: lite }
+      web: { replicaCount: null }
+    template: web.yaml
+    documentIndex: 0
+    asserts:
+      - equal:
+          path: spec.replicas
+          value: 1
+
+  - it: should handle empty S3 credentials gracefully (should still render fields)
+    set:
+      storage:
+        type: s3
+        s3:
+          bucket: "b"
+          region: "r"
+          accessKeyId: ""
+          secretAccessKey: ""
+    template: web.yaml
+    documentIndex: 0
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content: { name: S3_ACCESS_KEY_ID, value: "" }
+
+  - it: should respect custom port configurations for both internal and target
+    set:
+      services:
+        internalPort: 8080
+        targetPort: 9090
+    template: web.yaml
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].ports[0].containerPort
+          value: 8080
+        documentIndex: 0
+      - equal:
+          path: spec.ports[0].targetPort
+          value: 9090
+        documentIndex: 1

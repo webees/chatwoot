@@ -1,0 +1,47 @@
+suite: test resource constraints and limits
+templates:
+  - web.yaml
+  - worker.yaml
+tests:
+  - it: should apply specific resource limits for web
+    set:
+      web:
+        resources:
+          limits:
+            cpu: "1000m"
+            memory: "1Gi"
+          requests:
+            cpu: "250m"
+            memory: "512Mi"
+    template: web.yaml
+    documentIndex: 0
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].resources.limits.cpu
+          value: "1000m"
+      - equal:
+          path: spec.template.spec.containers[0].resources.requests.memory
+          value: "512Mi"
+
+  - it: should apply specific resource limits for worker
+    set:
+      worker:
+        resources:
+          limits:
+            cpu: "2000m"
+            memory: "2Gi"
+    template: worker.yaml
+    documentIndex: 0
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].resources.limits.cpu
+          value: "2000m"
+
+  - it: should respect the absence of resources if not provided (omit field)
+    set:
+      web: { resources: null }
+    template: web.yaml
+    documentIndex: 0
+    asserts:
+      - notExists:
+          path: spec.template.spec.containers[0].resources
