@@ -1,8 +1,8 @@
 apiVersion: v2
 name: chatwoot
-version: 2.1.16
+version: 2.2.0
 appVersion: "v4.11.1"
-description: "Chatwoot 专业加固版：极简架构、安全至上、高可用就绪（艺术定制版）🔥💬"
+description: "Chatwoot 艺术进化版：具备环境 Profiles、零信任网络策略与极限精简架构 (v2.2.0) 🔥💬"
 type: application
 keywords: [chatwoot, open-source, customer-support, crm, high-availability, hardened]
 

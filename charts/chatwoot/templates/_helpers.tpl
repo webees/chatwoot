@@ -1,4 +1,35 @@
 {{/*
+Global Context & Mode
+Valid modes: production, lite
+*/}}
+{{- define "chatwoot.mode" -}}
+{{- default "production" .Values.global.mode -}}
+{{- end -}}
+
+{{/*
+Dynamic Replicas based on Profile
+*/}}
+{{- define "chatwoot.web.replicas" -}}
+{{- if .Values.web.replicaCount -}}
+{{- .Values.web.replicaCount -}}
+{{- else if eq (include "chatwoot.mode" .) "production" -}}
+2
+{{- else -}}
+1
+{{- end -}}
+{{- end -}}
+
+{{- define "chatwoot.worker.replicas" -}}
+{{- if .Values.worker.replicaCount -}}
+{{- .Values.worker.replicaCount -}}
+{{- else if eq (include "chatwoot.mode" .) "production" -}}
+2
+{{- else -}}
+1
+{{- end -}}
+{{- end -}}
+
+{{/*
 Expand the name of the chart.
 */}}
 {{- define "chatwoot.name" -}}

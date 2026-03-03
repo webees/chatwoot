@@ -6,7 +6,7 @@ metadata:
     {{- include "chatwoot.labels" . | nindent 4 }}
     role: web
 spec:
-  replicas: {{ int .Values.web.replicaCount }}
+  replicas: {{ include "chatwoot.web.replicas" . }}
   selector:
     matchLabels:
       {{- include "chatwoot.selector" . | nindent 6 }}
