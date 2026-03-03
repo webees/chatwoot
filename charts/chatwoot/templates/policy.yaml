@@ -1,4 +1,4 @@
-{{/* --- [ 1. Network Policy: Zero-Trust ] --- */}}
+{{/* --- [ 1. 网络策略: 零信任流量治理 ] --- */}}
 {{- if .Values.networkPolicy.enabled }}
 kind: NetworkPolicy
 apiVersion: networking.k8s.io/v1
@@ -10,7 +10,7 @@ spec:
   policyTypes: [Ingress, Egress]
   ingress:
     - from: [{ podSelector: { matchLabels: { {{ include "chatwoot.selector" . }} } } }]
-    - from: [] # Allow monitoring/ingress based on common K8s patterns if needed
+    - from: [] # 如有需要，允许基于通用 K8s 模式的入口流量（如监控）
       ports: [{ protocol: TCP, port: {{ .Values.services.internalPort }} }]
   egress:
     - to: [{ podSelector: { matchLabels: { app.kubernetes.io/name: {{ include "chatwoot.name" . }} } } }]
@@ -20,7 +20,7 @@ spec:
     {{- end }}
 {{- end }}
 ---
-{{/* --- [ 2. Pod Disruption Budget ] --- */}}
+{{/* --- [ 2. Pod 干扰预算 (PDB) ] --- */}}
 {{- if .Values.podDisruptionBudget.enabled -}}
 {{- range $role := list "web" "worker" }}
 apiVersion: policy/v1
@@ -35,7 +35,7 @@ spec:
 {{- end }}
 {{- end }}
 ---
-{{/* --- [ 3. Horizontal Pod Autoscaler ] --- */}}
+{{/* --- [ 3. 水平自动扩缩容 (HPA) ] --- */}}
 {{- range $role := list "web" "worker" }}
 {{- $cfg := index $.Values $role }}
 {{- if $cfg.hpa.enabled }}

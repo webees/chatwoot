@@ -1,3 +1,4 @@
+{{/* --- [ 数据库自动迁移任务 ] --- */}}
 apiVersion: batch/v1
 kind: Job
 metadata:
@@ -26,11 +27,11 @@ spec:
             do
               sleep 2;
             done;
-            echo "Database ready to accept connections."  ;
+            echo "数据库已准备就绪，可以接收连接。" ;
       - name: init-cache
         image: busybox:1.28
         imagePullPolicy: {{ .Values.image.pullPolicy }}
-        command: ["sh", "-c", "until nslookup {{ include "chatwoot.cache.host" . }} ; do echo waiting for {{ include "chatwoot.cache.host" . }} ; sleep 2; done;"]
+        command: ["sh", "-c", "until nslookup {{ include "chatwoot.cache.host" . }} ; do echo 正在等待 {{ include "chatwoot.cache.host" . }} ; sleep 2; done;"]
       containers:
       - name: migrate
         image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
