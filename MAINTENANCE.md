@@ -67,6 +67,12 @@ Official Chatwoot images for PostgreSQL dropped ARM support in 2025.
 *   **Ingress Dynamic Naming**: Ingress backend service name now dynamically uses `chatwoot.fullname`, preventing broken links if `fullnameOverride` is changed.
 *   **Job Naming**: Migration job renamed from `${Release.Name}-migrate` to `${Fullname}-migrate` for consistency.
 
+### 8. Security Hardening & Resource Management (v2.1.13)
+*   **Non-Root Execution**: Pods now run as non-root (UID 1000) by default for enhanced security.
+*   **Infrastructure Throttling**: Explicit CPU/Memory limits added for PostgreSQL and Redis to prevent noisy neighbor issues in HA environments.
+*   **PG Storage Fix**: Switched accessModes to `ReadWriteOnce` for standard storage class compatibility.
+*   **Cleanup**: Removed unused `readReplicas` for PostgreSQL to maintain minimalism.
+
 ---
 
 ## 🛡 Upgrade Safety & Atomic Rollback

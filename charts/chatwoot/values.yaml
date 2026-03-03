@@ -80,16 +80,12 @@ serviceAccount:
 
 podAnnotations: {}
 
-podSecurityContext: {}
-  # fsGroup: 2000
+podSecurityContext:
+  fsGroup: 1000
 
-securityContext: {}
-  # capabilities:
-  #   drop:
-  #   - ALL
-  # readOnlyRootFilesystem: true
-  # runAsNonRoot: true
-  # runAsUser: 1000
+securityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
 
 service:
   type: ClusterIP
@@ -133,6 +129,13 @@ affinity: &affinity
 postgresql:
   enabled: true
   nameOverride: chatwoot-postgresql
+  resources:
+    limits:
+      cpu: 500m
+      memory: 512Mi
+    requests:
+      cpu: 100m
+      memory: 256Mi
   image:
     registry: docker.io
     repository: pgvector/pgvector
@@ -155,23 +158,23 @@ postgresql:
       enabled: true
       size: 1Gi
       accessModes:
-        - ReadWriteMany
+        - ReadWriteOnce
     affinity: *affinity
-    podAntiAffinityPreset: ""
   readReplicas:
-    persistence:
-      enabled: true
-      size: 1Gi
-      accessModes:
-        - ReadWriteMany
-    affinity: *affinity
-    podAntiAffinityPreset: ""
+    enabled: false
 
 redis:
   image:
     repository: bitnamilegacy/redis
   enabled: true
   nameOverride: chatwoot-redis
+  resources:
+    limits:
+      cpu: 200m
+      memory: 256Mi
+    requests:
+      cpu: 100m
+      memory: 128Mi
   auth:
     password: redis
     # when defined the password field is ignored
