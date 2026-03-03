@@ -1,4 +1,4 @@
-{{/* --- [ 1. Environment Secrets ] --- */}}
+{{/* --- [ 1. 环境密钥配置 (Secrets) ] --- */}}
 apiVersion: v1
 kind: Secret
 metadata:
@@ -19,7 +19,7 @@ data:
   {{ $k }}: {{ $v | toString | b64enc | quote }}
   {{- end }}
 ---
-{{/* --- [ 2. Core Deployments (Web & Worker) ] --- */}}
+{{/* --- [ 2. 核心部署单元 (Web & Worker) ] --- */}}
 {{- range $role := list "web" "worker" }}
 {{- $cfg := index $.Values $role }}
 apiVersion: apps/v1
@@ -66,7 +66,7 @@ spec:
       securityContext: {runAsNonRoot: true, runAsUser: 1000}
 ---
 {{- end }}
-{{/* --- [ 3. Infrastructure: Service, SA, Ingress ] --- */}}
+{{/* --- [ 3. 基础设施组件: Service, SA, Ingress ] --- */}}
 apiVersion: v1
 kind: Service
 metadata:
