@@ -1,0 +1,44 @@
+suite: test Zero-Trust Security Policy
+templates:
+  - policy.yaml
+tests:
+  - it: should have NetworkPolicy enabled by default
+    template: policy.yaml
+    documentIndex: 0
+    asserts:
+      - equal:
+          path: kind
+          value: NetworkPolicy
+      - equal:
+          path: spec.policyTypes
+          value: [Ingress, Egress]
+
+  - it: should allow external egress when configured
+    template: policy.yaml
+    documentIndex: 0
+    set:
+      networkPolicy:
+        enabled: true
+        allowExternalEgress: true
+    asserts:
+      - contains:
+          path: spec.egress
+          content:
+            to:
+              - ipBlock:
+                  cidr: 0.0.0.0/0
+
+  - it: should restrict egress when allowExternalEgress is false
+    template: policy.yaml
+    documentIndex: 0
+    set:
+      networkPolicy:
+        enabled: true
+        allowExternalEgress: false
+    asserts:
+      - notContains:
+          path: spec.egress
+          content:
+            to:
+              - ipBlock:
+                  cidr: 0.0.0.0/0

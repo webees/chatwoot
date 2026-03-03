@@ -1,5 +1,13 @@
 # 维护指南：Chatwoot Helm Chart 定制化说明
 
+### 🛠 维护记录 (Maintenance Log)
+
+#### v3.5.0 (2026-03-04) - 安全增强与严苛测试
+- **Zero-Downtime**: 引入 `terminationGracePeriodSeconds` 与 `failureThreshold` 优化。
+- **Strict Testing**: 新增 `security_test.yaml`，覆盖零信任网络策略验证。
+- **CI Fix**: 彻底修复了多套件下的 `DocumentIndex` 偏移导致的测试报错。
+- **Documentation**: 全面订正文档以匹配 v3.5 极客安全标准。
+
 本项目是官方 [chatwoot/charts](https://github.com/chatwoot/charts) 的深度定制分支。它保留了针对高可用性 (HA)、ARM64 架构支持和极致性能优化的增强功能。
 
 ## 🔄 上游同步策略

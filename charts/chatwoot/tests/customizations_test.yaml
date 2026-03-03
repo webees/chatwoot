@@ -3,7 +3,7 @@ templates:
   - web.yaml
   - worker.yaml
   - policy.yaml
-  - base.yaml  # Required for checksum validation in web.yaml/worker.yaml
+  - base.yaml
 release:
   name: chatwoot-release
   namespace: default
@@ -12,6 +12,7 @@ tests:
     set:
       fullnameOverride: "chatwoot"
     template: web.yaml
+    documentIndex: 0
     asserts:
       - equal:
           path: metadata.name
@@ -21,6 +22,7 @@ tests:
     set:
       global: { mode: production }
     template: web.yaml
+    documentIndex: 0
     asserts:
       - equal:
           path: spec.replicas
@@ -30,6 +32,7 @@ tests:
     set:
       global: { mode: production }
     template: worker.yaml
+    documentIndex: 0
     asserts:
       - equal:
           path: spec.replicas
@@ -37,15 +40,15 @@ tests:
 
   - it: should have hpa enabled for both web and worker when configured
     set:
-      web: { hpa: { enabled: true, minpods: 1, cputhreshold: 80 } }
-      worker: { hpa: { enabled: true, minpods: 2, cputhreshold: 70 } }
+      web: { hpa: { enabled: true, minpods: 1, maxpods: 5, cputhreshold: 80 } }
+      worker: { hpa: { enabled: true, minpods: 2, maxpods: 5, cputhreshold: 70 } }
     template: policy.yaml
     asserts:
       - equal:
           path: spec.minReplicas
           value: 1
-        documentIndex: 2
+        documentIndex: 2 # HPA for web
       - equal:
           path: spec.minReplicas
           value: 2
-        documentIndex: 3
+        documentIndex: 3 # HPA for worker

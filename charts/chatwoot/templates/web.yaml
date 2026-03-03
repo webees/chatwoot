@@ -49,15 +49,21 @@ spec:
             httpGet:
               path: /health
               port: {{ .Values.services.internalPort }}
-            initialDelaySeconds: 15
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            failureThreshold: 3
           readinessProbe:
             httpGet:
               path: /api
               port: {{ .Values.services.internalPort }}
             initialDelaySeconds: 15
+            periodSeconds: 5
+            successThreshold: 1
+            failureThreshold: 5
       securityContext:
         runAsNonRoot: true
         runAsUser: 1000
+      terminationGracePeriodSeconds: 60
 ---
 {{/* --- [ Web 内网访问服务 ] --- */}}
 apiVersion: v1
