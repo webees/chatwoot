@@ -84,9 +84,12 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 imagePullSecrets:
   {{- toYaml . | nindent 2 }}
 {{- end }}
-{{- with (default .Values.affinity .Values.global.affinity) }}
+{{- if .Values.affinity }}
 affinity:
-  {{- toYaml . | nindent 2 }}
+  {{- toYaml .Values.affinity | nindent 2 }}
+{{- else if .Values.global.affinity }}
+affinity:
+  {{- toYaml .Values.global.affinity | nindent 2 }}
 {{- end }}
 serviceAccountName: {{ include "chatwoot.serviceAccountName" . }}
 volumes:
