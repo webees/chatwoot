@@ -1,0 +1,56 @@
+{{/* --- [ 1. Network Policy: Zero-Trust ] --- */}}
+{{- if .Values.networkPolicy.enabled }}
+kind: NetworkPolicy
+apiVersion: networking.k8s.io/v1
+metadata:
+  name: {{ include "chatwoot.full" . }}-boundary
+  labels: {{ include "chatwoot.labels" . | nindent 4 }}
+spec:
+  podSelector: { matchLabels: { {{ include "chatwoot.selector" . }} } }
+  policyTypes: [Ingress, Egress]
+  ingress:
+    - from: [{ podSelector: { matchLabels: { {{ include "chatwoot.selector" . }} } } }]
+    - from: [] # Allow monitoring/ingress based on common K8s patterns if needed
+      ports: [{ protocol: TCP, port: {{ .Values.services.internalPort }} }]
+  egress:
+    - to: [{ podSelector: { matchLabels: { app.kubernetes.io/name: {{ include "chatwoot.name" . }} } } }]
+    - to: [{ ports: [{ protocol: UDP, port: 53 }, { protocol: TCP, port: 53 }] }]
+    {{- if .Values.networkPolicy.allowExternalEgress }}
+    - to: [{ ipBlock: { cidr: 0.0.0.0/0 } }]
+    {{- end }}
+{{- end }}
+---
+{{/* --- [ 2. Pod Disruption Budget ] --- */}}
+{{- if .Values.podDisruptionBudget.enabled -}}
+{{- range $role := list "web" "worker" }}
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "chatwoot.full" $ }}-{{ $role }}
+  labels: {{ include "chatwoot.labels" $ | nindent 4 }}
+spec:
+  minAvailable: {{ default 1 $.Values.podDisruptionBudget.minAvailable }}
+  selector: { matchLabels: { {{ include "chatwoot.selector" $ }}, role: {{ $role }} } }
+---
+{{- end }}
+{{- end }}
+---
+{{/* --- [ 3. Horizontal Pod Autoscaler ] --- */}}
+{{- range $role := list "web" "worker" }}
+{{- $cfg := index $.Values $role }}
+{{- if $cfg.hpa.enabled }}
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ include "chatwoot.full" $ }}-{{ $role }}
+  labels: {{ include "chatwoot.labels" $ | nindent 4 }}
+spec:
+  scaleTargetRef: {apiVersion: apps/v1, kind: Deployment, name: {{ include "chatwoot.full" $ }}-{{ $role }} }
+  minReplicas: {{ $cfg.hpa.minpods }}
+  maxReplicas: {{ $cfg.hpa.maxpods }}
+  metrics:
+    - type: Resource
+      resource: { name: cpu, target: { type: Utilization, averageUtilization: {{ $cfg.hpa.cputhreshold }} } }
+---
+{{- end }}
+{{- end }}

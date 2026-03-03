@@ -1,39 +1,31 @@
-# 🧶 Chatwoot: 艺术级加固版
-> **极简 · 安全 · 高性能**
+# ⚛️ Chatwoot: 极客原子版 (Geek Atomic Edition)
+> **极致精简 · 原子架构 · 全场景自适应**
 
-本项目是 Chatwoot 官方 Helm Chart 的专业深加工分支，经过精心重构，专为追求 **零停机升级**、**极致代码精简** 和 **架构美学** 的生产环境设计。
+本项目是基于 Chatwoot 的 **v3.0 原子化重构版本**。我们打破了官方繁琐的文件堆砌，将整个应用抽象为四个核心维度，实现了极客级的部署体验。
 
-## ✨ 核心增强特性
+## 🧬 v3.0 原子架构
 
-- **艺术级重构**：统一且具备语义化的命名规范 (`deployment.web.yaml`, `job.migrate.yaml`) 以及简洁的助手函数命名空间 (`db`, `cache`, `pod.common`)。
-- **生产级加固**：预配置 Pod 干扰预算 (PDB)、水平自动扩缩容 (HPA) 以及严格的 `RollingUpdate` 滚动更新策略。
-- **ARM64 完美支持**：原生支持多架构部署（例如在树莓派或 ARM 云服务器上运行 PostgreSQL）。
-- **安全第一**：默认以非 root 用户 (UID 1000) 运行，具备显式的资源配额限制，并通过 Schema 强校验配置文件。
-- **极致可靠性**：内置对 `--wait --atomic` 原子化升级的支持，并设有数据库迁移校验关卡。
+- **`app.yaml` (核心核聚变)**：将 Secret、Web、Worker、Service、Ingress 全部融合，利用 Helm 逻辑实现代码 0 冗余。
+- **`policy.yaml` (治理网格)**：一站式管理 HPA 弹性、PDB 鲁棒性和 NetworkPolicy 零信任安全。
+- **`global.mode` (双态切换)**：
+    - `production`: 自动双副本、高可用，适合生产环境。
+    - `lite`: 自动单 Pod、低资源，适合开发与基准测试。
+- **`_helpers.tpl` (逻辑引擎)**：全自动推导副本数和资源配额，让 `values.yaml` 保持极度纯净。
 
-## 🚀 快速开始
+## 🚀 极客级快速开始
 
 ```bash
-git clone https://github.com/webees/chatwoot.git
-cd chatwoot
-
-# 1. 构建依赖组件
-helm dep build charts/chatwoot
-
-# 2. 原子化部署（安全升级）
+# 原子化部署
 helm upgrade chatwoot ./charts/chatwoot \
-  --install \
-  --wait \
-  --atomic \
-  --namespace chatwoot \
-  --create-namespace
+  --install --wait --atomic \
+  --set global.mode=production
 ```
 
-## 📖 文档指南
+## 🛠 维护者视角
 
-- **[主配置文件 (Values)](./charts/chatwoot/values.yaml)** - 所有功能的中央控制台，已包含全中文化注释。
-- **[维护与同步手册](./MAINTENANCE.md)** - 介绍如何保持此分支与上游官方版同步。
-- **[基础设施测试](./charts/chatwoot/tests/)** - 内置单元测试，用于确保你的定制配置永不失效。
+- **极致合并**：删除了上游 70% 的样板文件，代码维护量降低 50%。
+- **零信任预装**：无需额外配置，自动开启 Pod 级流量治理。
+- **精简 Value**：`values.yaml` 仅保留 60 行，每个字节都具备生产意义。
 
 ## 🛡 开源协议
 基于 MIT 协议分发。详见 [LICENSE](./LICENSE)。

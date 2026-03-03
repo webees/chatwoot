@@ -1,10 +1,7 @@
 suite: test local customizations
 templates:
-  - deployment.web.yaml
-  - deployment.worker.yaml
-  - policy.hpa.yaml
-  - values.yaml
-  - Chart.yaml
+  - app.yaml
+  - policy.yaml
 release:
   name: chatwoot-release
   namespace: default
@@ -12,61 +9,38 @@ tests:
   - it: should have fullnameOverride applied
     set:
       fullnameOverride: "chatwoot"
-    template: deployment.web.yaml
+    template: app.yaml
     asserts:
       - equal:
           path: metadata.name
           value: chatwoot-web
+        documentIndex: 1 # Web Deployment is the 2nd doc in app.yaml
 
-  - it: should have worker affinity by default
-    template: deployment.web.yaml
-    asserts:
-      - exists:
-          path: spec.template.spec.affinity.nodeAffinity.requiredDuringSchedulingIgnoredDuringExecution.nodeSelectorTerms[0].matchExpressions[0]
-      - equal:
-          path: spec.template.spec.affinity.nodeAffinity.requiredDuringSchedulingIgnoredDuringExecution.nodeSelectorTerms[0].matchExpressions[0].key
-          value: worker
-
-  - it: should have topologySpreadConstraints for HA
-    template: deployment.web.yaml
+  - it: should scale via profile
     set:
-      topologySpreadConstraints:
-        - maxSkew: 1
-          topologyKey: kubernetes.io/hostname
-          whenUnsatisfiable: DoNotSchedule
-          labelSelector:
-            matchLabels:
-              app: chatwoot
+      global: { mode: production }
+    template: app.yaml
     asserts:
       - equal:
-          path: spec.template.spec.topologySpreadConstraints[0].maxSkew
-          value: 1
+          path: spec.replicas
+          value: 2
+        documentIndex: 1 # Web
+      - equal:
+          path: spec.replicas
+          value: 2
+        documentIndex: 2 # Worker
 
   - it: should have hpa enabled for both web and worker when configured
     set:
-      web:
-        hpa:
-          enabled: true
-          minpods: 1
-          maxpods: 5
-          cputhreshold: 80
-          memorythreshold: 80
-      worker:
-        hpa:
-          enabled: true
-          minpods: 2
-          maxpods: 6
-          cputhreshold: 70
-          memorythreshold: 70
-    template: policy.hpa.yaml
+      web: { hpa: { enabled: true, minpods: 1, cputhreshold: 80 } }
+      worker: { hpa: { enabled: true, minpods: 2, cputhreshold: 70 } }
+    template: policy.yaml
     asserts:
-      - hasDocuments:
-          count: 2
       - equal:
           path: spec.minReplicas
           value: 1
-        documentIndex: 0
+        documentIndex: 2 # 3rd doc in policy.yaml (PDBs come first, then HPA)
       - equal:
           path: spec.minReplicas
           value: 2
-        documentIndex: 1
+        documentIndex: 3

@@ -1,30 +1,15 @@
 apiVersion: v2
 name: chatwoot
-version: 2.2.0
+version: 3.0.0
 appVersion: "v4.11.1"
-description: "Chatwoot 艺术进化版：具备环境 Profiles、零信任网络策略与极限精简架构 (v2.2.0) 🔥💬"
+description: "Chatwoot 极客原子版：极致精简、原子化架构、全场景自适应 (v3.0.0) ⚛️"
 type: application
-keywords: [chatwoot, open-source, customer-support, crm, high-availability, hardened]
-
+keywords: [chatwoot, minimalism, geek, atomic, hardened]
 home: https://github.com/webees/chatwoot
 icon: https://chatwoot-public-assets.s3.amazonaws.com/logo/square.png
-sources:
-  - https://github.com/chatwoot/chatwoot
-  - https://github.com/chatwoot/charts
-
+sources: [https://github.com/chatwoot/chatwoot, https://github.com/chatwoot/charts]
 dependencies:
-  - name: postgresql
-    version: 11.6.7
-    repository: https://charts.bitnami.com/bitnami
-    condition: postgresql.enabled
-  - name: redis
-    version: 16.12.2
-    repository: https://charts.bitnami.com/bitnami
-    condition: redis.enabled
-  - name: common
-    version: 2.31.4
-    repository: oci://registry-1.docker.io/bitnamicharts
-
-maintainers:
-  - name: webees
-    email: hello@webees.io
+  - {name: postgresql, version: 11.6.7, repository: "https://charts.bitnami.com/bitnami", condition: "postgresql.enabled"}
+  - {name: redis, version: 16.12.2, repository: "https://charts.bitnami.com/bitnami", condition: "redis.enabled"}
+  - {name: common, version: 2.31.4, repository: "oci://registry-1.docker.io/bitnamicharts"}
+maintainers: [{name: webees, email: hello@webees.io}]
