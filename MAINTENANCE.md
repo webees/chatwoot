@@ -61,6 +61,12 @@ Official Chatwoot images for PostgreSQL dropped ARM support in 2025.
 *   **Release Workflow**: Added `permissions: contents: write` to `.github/workflows/release.yaml`.
 *   **Trigger**: Configured to auto-release on push to `main` to support Rancher Helm Repository synchronization.
 
+### 7. Internal Consistency & Bug Fixes (v2.1.12)
+*   **Redis Auth**: Fixed `redis.auth.existingSecret` path in web/worker deployments to match Bitnami standards.
+*   **PDB Selectors**: Added `release` label to PDB selectors for precise pod matching.
+*   **Ingress Dynamic Naming**: Ingress backend service name now dynamically uses `chatwoot.fullname`, preventing broken links if `fullnameOverride` is changed.
+*   **Job Naming**: Migration job renamed from `${Release.Name}-migrate` to `${Fullname}-migrate` for consistency.
+
 ---
 
 ## ✅ Post-Upgrade Verification
