@@ -27,12 +27,11 @@ spec:
         - podSelector:
             matchLabels:
               app.kubernetes.io/name: {{ include "chatwoot.name" . }}
-    - to:
-        - ports:
-            - protocol: UDP
-              port: 53
-            - protocol: TCP
-              port: 53
+    - ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
     {{- if .Values.networkPolicy.allowExternalEgress }}
     - to:
         - ipBlock:

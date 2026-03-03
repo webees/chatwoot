@@ -42,3 +42,15 @@ tests:
             to:
               - ipBlock:
                   cidr: 0.0.0.0/0
+  - it: should permit DNS egress on 53 UDP/TCP
+    template: policy.yaml
+    documentIndex: 0
+    asserts:
+      - contains:
+          path: spec.egress
+          content:
+            ports:
+              - protocol: UDP
+                port: 53
+              - protocol: TCP
+                port: 53
