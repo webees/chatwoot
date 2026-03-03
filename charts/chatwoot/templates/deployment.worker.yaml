@@ -2,7 +2,6 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: {{ include "chatwoot.full" . }}-worker
-  creationTimestamp: null
   labels:
     {{- include "chatwoot.labels" . | nindent 4 }}
     role: worker
@@ -19,7 +18,6 @@ spec:
       maxSurge: 1
   template:
     metadata:
-      creationTimestamp: null
       labels:
         {{- include "chatwoot.selector" . | nindent 8 }}
         role: worker
