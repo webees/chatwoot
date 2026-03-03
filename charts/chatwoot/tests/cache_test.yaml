@@ -6,24 +6,24 @@ tests:
   - it: should use memory storage for cache by default
     template: web.yaml
     documentIndex: 0
+    set:
+      redis:
+        master:
+          persistence:
+            medium: Memory
     asserts:
       - equal:
           path: spec.template.spec.volumes[0].emptyDir.medium
           value: Memory
-        set:
-          redis:
-            master:
-              persistence:
-                medium: Memory
 
-  - it: should point to redis standalone master by default
+  - it: should load environment from secret
     template: web.yaml
     documentIndex: 0
     release:
       name: cw
     asserts:
       - contains:
-          path: spec.template.spec.containers[0].env
+          path: spec.template.spec.containers[0].envFrom
           content:
-            name: REDIS_URL
-            value: redis://:redis@cw-redis-master:6379
+            secretRef:
+              name: cw-chatwoot-env

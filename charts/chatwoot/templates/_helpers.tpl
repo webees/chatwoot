@@ -91,7 +91,12 @@ affinity:
 serviceAccountName: {{ include "chatwoot.serviceAccountName" . }}
 volumes:
   - name: cache
-    emptyDir: {}
+    emptyDir:
+      {{- if eq (default "" .Values.redis.master.persistence.medium) "Memory" }}
+      medium: Memory
+      {{- else }}
+      {}
+      {{- end }}
 {{- end -}}
 
 {{/* 环境变量块 */}}

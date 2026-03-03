@@ -40,6 +40,8 @@ tests:
 
   - it: should have hpa enabled for both web and worker when configured
     set:
+      networkPolicy: { enabled: true }
+      podDisruptionBudget: { enabled: false }
       web: { hpa: { enabled: true, minpods: 1, maxpods: 5, cputhreshold: 80 } }
       worker: { hpa: { enabled: true, minpods: 2, maxpods: 5, cputhreshold: 70 } }
     template: policy.yaml
@@ -47,8 +49,8 @@ tests:
       - equal:
           path: spec.minReplicas
           value: 1
-        documentIndex: 2 # HPA for web
+        documentIndex: 1 # HPA for web (Doc 0 is NetworkPolicy)
       - equal:
           path: spec.minReplicas
           value: 2
-        documentIndex: 3 # HPA for worker
+        documentIndex: 2 # HPA for worker
