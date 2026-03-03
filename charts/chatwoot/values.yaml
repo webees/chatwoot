@@ -1,23 +1,28 @@
-# 🧶 Chatwoot: 极客进化版 (Geek v3.0)
-# 核心哲学：极简、原子、自愈
+# 🧶 Chatwoot: 极客进化版 (Geek v3.2)
+# 核心哲学：极简、原子、自愈、智能配置
 
-# --- [ 0. 全局 Profile ] ---
-# production: 高可用、双副本、强隔离
-# lite: 单 Pod 运行、低内存、开发模式
+# --- [ 0. 全局模式 ] ---
 global:
-  mode: production
-  affinity: {} # 全局 Pod 亲和性，留空则使用默认调度
+  mode: production # production | lite
 
 # --- [ 1. 核心镜像 ] ---
 image: { repository: chatwoot/chatwoot, tag: v4.11.1, pullPolicy: IfNotPresent }
 
-# --- [ 2. 安全与策略控制 ] ---
-networkPolicy: { enabled: true, allowExternalEgress: true }
-podDisruptionBudget: { enabled: false, minAvailable: 1 }
+# --- [ 2. 智能存储引擎 (v3.2 New!) ] ---
+# 极客进化：只需选择类型，系统自动生成对应的 10+ 个环境变量
+storage:
+  type: local # local | s3 | gcs
+  s3:
+    bucket: ""
+    region: ""
+    accessKeyId: ""
+    secretAccessKey: ""
+  gcs:
+    bucket: ""
+    project: ""
 
-# --- [ 3. 组件精控 (留空则使用模式默认值) ] ---
+# --- [ 3. 极简负载配置 ] ---
 web:
-  # replicaCount: 1 # 手动覆盖模式默认副本数
   resources: { limits: { cpu: 500m, memory: 512Mi }, requests: { cpu: 100m, memory: 256Mi } }
   hpa: { enabled: false, minpods: 1, maxpods: 10, cputhreshold: 75 }
 
@@ -25,7 +30,11 @@ worker:
   resources: { limits: { cpu: 500m, memory: 512Mi }, requests: { cpu: 100m, memory: 256Mi } }
   hpa: { enabled: false, minpods: 1, maxpods: 10, cputhreshold: 75 }
 
-# --- [ 4. 基础设施 (推荐使用 Operator，当前保留 Subchart 以兼容) ] ---
+# --- [ 4. 安全与流量治理 ] ---
+networkPolicy: { enabled: true, allowExternalEgress: true }
+podDisruptionBudget: { enabled: false }
+
+# --- [ 5. 基础设施 ] ---
 postgresql:
   enabled: true
   image: { registry: docker.io, repository: pgvector/pgvector, tag: pg16 }
@@ -42,20 +51,20 @@ redis:
     persistence: { enabled: false, medium: Memory }
   resources: { limits: { memory: 256Mi }, requests: { memory: 128Mi } }
 
-# --- [ 5. 网络接入 ] ---
+# --- [ 6. 网络接入 ] ---
 service: { type: LoadBalancer, port: 80 }
 services: { internalPort: 3000, targetPort: 3000 }
 ingress:
   enabled: false
   hosts: [{ host: "", paths: [{ path: /, pathType: Prefix }] }]
-  tls: []
 
-# --- [ 6. 元数据与生命周期 ] ---
+# --- [ 7. 元数据与生命周期 ] ---
 fullnameOverride: "chatwoot"
 serviceAccount: { create: true }
 hooks:
   migrate: { hookAnnotation: "post-install,post-upgrade" }
 
+# 扁平环境变量 (仅用于存放无法通过引擎推导的特殊变量)
 env:
   DEFAULT_LOCALE: zh-CN
   INSTALLATION_ENV: helm
