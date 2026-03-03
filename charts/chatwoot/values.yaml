@@ -134,8 +134,9 @@ postgresql:
   enabled: true
   nameOverride: chatwoot-postgresql
   image:
-    registry: ghcr.io
-    repository: chatwoot/pgvector
+    registry: docker.io
+    repository: pgvector/pgvector
+    tag: pg16
   auth:
     username: postgres
     postgresPassword: postgres
