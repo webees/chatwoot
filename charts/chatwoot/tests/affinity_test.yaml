@@ -43,13 +43,10 @@ tests:
       - notExists:
           path: spec.template.spec.affinity.nodeAffinity
 
-  - it: should default all pods to worker nodes (Soft Affinity)
+  - it: should default all pods to worker nodes (Hard Constraint)
     template: web.yaml
     documentIndex: 0
     asserts:
       - equal:
-          path: spec.template.spec.affinity.nodeAffinity.preferredDuringSchedulingIgnoredDuringExecution[0].preference.matchExpressions[0].key
-          value: "worker"
-      - equal:
-          path: spec.template.spec.affinity.nodeAffinity.preferredDuringSchedulingIgnoredDuringExecution[0].weight
-          value: 100
+          path: spec.template.spec.nodeSelector.worker
+          value: "true"
