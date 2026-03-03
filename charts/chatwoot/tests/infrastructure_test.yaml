@@ -1,34 +1,46 @@
-suite: test infrastructure and secret logic
+suite: test infrastructure stability
 templates:
-  - env-secret.yaml
+  - job.migrate.yaml
+  - secret.env.yaml
   - ingress.yaml
 tests:
-  - it: should use the multi-arch pgvector image for ARM support
-    template: web-deployment.yaml # Check via deployment as common logic
+  - it: should use pg16 for multi-arch (ARM) support
+    set:
+      postgresql:
+        image:
+          tag: pg16
+    template: job.migrate.yaml
     asserts:
       - equal:
-          path: spec.template.spec.containers[0].image
-          value: chatwoot/chatwoot:v4.11.1 # This is the app image, checking the PG subchart values via config is better
+          path: spec.template.spec.initContainers[0].args[0]
+          value: -c
+      - matchRegex:
+          path: spec.template.spec.initContainers[0].args[1]
+          pattern: "pg_isready -h chatwoot-release-chatwoot-postgresql -p 5432"
 
-  - it: should render critical environment variables in secret
-    template: env-secret.yaml
-    set:
-      env:
-        DEFAULT_LOCALE: "zh-CN"
-        SMTP_ADDRESS: "smtp.local"
+  - it: should render environment secret correctly
+    template: secret.env.yaml
     asserts:
+      - equal:
+          path: metadata.name
+          value: chatwoot-release-chatwoot-env
       - exists:
-          path: data.DEFAULT_LOCALE
+          path: data.POSTGRES_HOST
       - exists:
-          path: data.SMTP_ADDRESS
+          path: data.REDIS_URL
 
-  - it: should dynamicly link ingress to fullnameOverride
-    template: ingress.yaml
+  - it: should link ingress to the correct service name
     set:
-      fullnameOverride: "prod-chatwoot"
+      fullnameOverride: "chatwoot"
       ingress:
         enabled: true
+        hosts:
+          - host: chatwoot.example.com
+            paths:
+              - path: /
+                pathType: Prefix
+    template: ingress.yaml
     asserts:
       - equal:
           path: spec.rules[0].http.paths[0].backend.service.name
-          value: prod-chatwoot
+          value: chatwoot

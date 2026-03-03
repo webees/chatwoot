@@ -2,7 +2,7 @@
 apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
-  name: {{ include "chatwoot.fullname" . }}-web
+  name: {{ include "chatwoot.full" . }}-web
   labels:
     {{- include "chatwoot.labels" . | nindent 4 }}
 spec:
@@ -14,14 +14,13 @@ spec:
   {{- end }}
   selector:
     matchLabels:
-      app: {{ template "chatwoot.fullname" . }}
-      release: "{{ .Release.Name }}"
+      {{- include "chatwoot.selector" . | nindent 6 }}
       role: web
 ---
 apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
-  name: {{ include "chatwoot.fullname" . }}-worker
+  name: {{ include "chatwoot.full" . }}-worker
   labels:
     {{- include "chatwoot.labels" . | nindent 4 }}
 spec:
@@ -33,7 +32,6 @@ spec:
   {{- end }}
   selector:
     matchLabels:
-      app: {{ template "chatwoot.fullname" . }}
-      release: "{{ .Release.Name }}"
+      {{- include "chatwoot.selector" . | nindent 6 }}
       role: worker
 {{- end }}

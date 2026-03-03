@@ -1,7 +1,7 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ template "chatwoot.fullname" . }}-web
+  name: {{ include "chatwoot.full" . }}-web
   creationTimestamp: null
   labels:
     {{- include "chatwoot.labels" . | nindent 4 }}
@@ -10,7 +10,7 @@ spec:
   replicas: {{ int .Values.web.replicaCount }}
   selector:
     matchLabels:
-      {{- include "chatwoot.selectorLabels" . | nindent 6 }}
+      {{- include "chatwoot.selector" . | nindent 6 }}
       role: web
   strategy:
     type: RollingUpdate
@@ -21,15 +21,15 @@ spec:
     metadata:
       creationTimestamp: null
       labels:
-        {{- include "chatwoot.selectorLabels" . | nindent 8 }}
+        {{- include "chatwoot.selector" . | nindent 8 }}
         role: web
       annotations:
-        checksum/config: {{ include (print $.Template.BasePath "/env-secret.yaml") . | sha256sum }}
+        checksum/config: {{ include (print $.Template.BasePath "/secret.env.yaml") . | sha256sum }}
         {{- with .Values.podAnnotations }}
         {{- toYaml . | nindent 8 }}
         {{- end }}
     spec:
-      {{- include "chatwoot.podCommon" . | nindent 6 }}
+      {{- include "chatwoot.pod.common" . | nindent 6 }}
       containers:
         - args:
             - bundle
@@ -43,7 +43,7 @@ spec:
           command:
             - docker/entrypoints/rails.sh
           env:
-          {{- include "chatwoot.envCommon" . | nindent 10 }}
+          {{- include "chatwoot.env.common" . | nindent 10 }}
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           name: web
           ports:
@@ -79,4 +79,3 @@ spec:
       {{- if .Values.securityContext }}
       securityContext: {{ .Values.securityContext | toYaml | nindent 8 }}
       {{- end }}
-

@@ -4,7 +4,7 @@
 apiVersion: {{ $.Values.autoscaling.apiVersion }}
 kind: HorizontalPodAutoscaler
 metadata:
-  name: {{ template "chatwoot.fullname" $ }}-{{ $component }}
+  name: {{ include "chatwoot.full" $ }}-{{ $component }}
   labels:
     {{- include "chatwoot.labels" $ | nindent 4 }}
     role: {{ $component }}
@@ -12,7 +12,7 @@ spec:
   scaleTargetRef:
     kind: Deployment
     apiVersion: apps/v1
-    name: {{ template "chatwoot.fullname" $ }}-{{ $component }}
+    name: {{ include "chatwoot.full" $ }}-{{ $component }}
   minReplicas: {{ $config.hpa.minpods }}
   maxReplicas: {{ $config.hpa.maxpods }}
   metrics:
@@ -27,7 +27,7 @@ spec:
         name: memory
         target:
           type: Utilization
-          averageUtilization: {{ $config.hpa.memorythreshold }}
+          averageUtilization: {{ default 80 $config.hpa.memorythreshold }}
 ---
 {{- end }}
 {{- end }}
