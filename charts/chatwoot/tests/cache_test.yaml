@@ -5,6 +5,7 @@ templates:
 tests:
   - it: should use memory storage for cache by default
     template: web.yaml
+    documentIndex: 0
     asserts:
       - equal:
           path: spec.template.spec.volumes[0].emptyDir.medium
@@ -17,6 +18,7 @@ tests:
 
   - it: should point to redis standalone master by default
     template: web.yaml
+    documentIndex: 0
     release:
       name: cw
     asserts:

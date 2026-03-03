@@ -45,3 +45,4 @@ spec:
       securityContext:
         runAsNonRoot: true
         runAsUser: 1000
+      terminationGracePeriodSeconds: 60

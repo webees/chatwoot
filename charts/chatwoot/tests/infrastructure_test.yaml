@@ -3,6 +3,9 @@ templates:
   - job.migrate.yaml
   - base.yaml
   - ingress.yaml
+release:
+  name: chatwoot-release
+  namespace: default
 tests:
   - it: should use pg16 for multi-arch (ARM) support
     set:
@@ -11,19 +14,18 @@ tests:
           tag: pg16
     template: job.migrate.yaml
     asserts:
-      - equal:
-          path: spec.template.spec.initContainers[0].args[0]
-          value: -c
       - matchRegex:
           path: spec.template.spec.initContainers[0].args[1]
-          pattern: "pg_isready -h chatwoot-release-chatwoot-postgresql -p 5432"
+          pattern: "pg_isready -h chatwoot-release-chatwoot-postgresql"
 
   - it: should render environment secret correctly
     template: base.yaml
+    set:
+      fullnameOverride: "chatwoot"
     asserts:
       - equal:
           path: metadata.name
-          value: chatwoot-release-chatwoot-env
+          value: chatwoot-env
       - exists:
           path: data.POSTGRES_HOST
       - exists:

@@ -12,6 +12,15 @@
 - **`worker.yaml` (任务单元)**：独立的 Sidekiq 异步处理单元，支持独立扩缩容。
 - **`policy.yaml` (治理网格)**：一站式管控 HPA 弹性、PDB 鲁棒性与 NetworkPolicy 零信任安全。
 
+## 🛡 升级安全与零停机 (v3.5 New!)
+
+我们将“安全”贯穿于 Chart 设计的每一行：
+
+- **原子化升级**：建议使用 `helm upgrade --atomic`。我们在 `strategy` 中强制设置了 `maxUnavailable: 0`，确保新 Pod 就绪前旧 Pod 不会下线。
+- **优雅停机**：设置了 `terminationGracePeriodSeconds: 60`，给 Rails 和 Sidekiq 充足的时间处理残留请求或任务。
+- **动态就绪检测**：精细化配置了 `liveness` 和 `readiness` 探针，通过 `failureThreshold` 缓冲启动抖动。
+- **分阶段迁移**：数据库迁移任务具备独立的 `nslookup` 检查，确保基础设施完全就绪后再执行 DDL。
+
 ## 🚀 核心极客特性
 
 - **`global.mode` (环境双态)**：一键切换 `production`（高可用）与 `lite`（轻量级）模式。
