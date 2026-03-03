@@ -32,6 +32,32 @@ jobs:
           helm repo add bitnami "https://charts.bitnami.com/bitnami"
           helm dep build charts/chatwoot/
 
+      - name: Auto-increment Chart version
+        run: |
+          # 获取当前版本
+          VERSION=$(yq eval '.version' charts/chatwoot/Chart.yaml)
+          echo "Current version: $VERSION"
+          
+          # 分解版本号 (Major.Minor.Patch)
+          MAJOR=$(echo $VERSION | cut -d. -f1)
+          MINOR=$(echo $VERSION | cut -d. -f2)
+          PATCH=$(echo $VERSION | cut -d. -f3)
+          
+          # 增加修订号
+          NEW_PATCH=$((PATCH + 1))
+          NEW_VERSION="$MAJOR.$MINOR.$NEW_PATCH"
+          echo "New version: $NEW_VERSION"
+          
+          # 写回文件
+          yq eval ".version = \"$NEW_VERSION\"" -i charts/chatwoot/Chart.yaml
+          # 同时更新描述中的版本号
+          yq eval ".description = (.description | sub(\"v[0-9.]+\", \"v$NEW_VERSION\"))" -i charts/chatwoot/Chart.yaml
+          
+          # 提交并推送变更 (使用 [skip ci] 避免无限循环)
+          git add charts/chatwoot/Chart.yaml
+          git commit -m "chore: auto-increment version to $NEW_VERSION [skip ci]"
+          git push origin main
+
       - name: Run chart-releaser
         uses: helm/chart-releaser-action@v1.7.0
         env:
