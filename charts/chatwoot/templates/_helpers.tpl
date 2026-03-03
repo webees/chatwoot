@@ -1,5 +1,5 @@
 {{/*
-全局环境 Profile
+全局环境配置与模式定义
 */}}
 {{- define "chatwoot.profile" -}}
 {{- default "production" .Values.global.mode -}}
@@ -18,7 +18,6 @@
 
 {{/* 
 存储配置生成器 (Geek Edition)
-根据 .Values.storage.type 自动生成 Chatwoot 所需的所有环境变量
 */}}
 {{- define "chatwoot.storage.env" -}}
 {{- if eq .Values.storage.type "s3" -}}
@@ -36,11 +35,19 @@
 {{- end -}}
 {{- end -}}
 
-{{/* 核心命名逻辑 */}}
+{{/* 核心命名块 */}}
 {{- define "chatwoot.name" -}}{{ default .Chart.Name .Values.nameOverride | trunc 63 | trimSuffix "-" }}{{- end -}}
 {{- define "chatwoot.full" -}}
 {{- if .Values.fullnameOverride }}{{ .Values.fullnameOverride | trunc 63 | trimSuffix "-" }}
 {{- else }}{{ printf "%s-%s" .Release.Name (include "chatwoot.name" .) | trunc 63 | trimSuffix "-" }}{{ end -}}
+{{- end -}}
+
+{{- define "chatwoot.serviceAccountName" -}}
+{{- if .Values.serviceAccount.create -}}
+    {{- default (include "chatwoot.full" .) .Values.serviceAccount.name -}}
+{{- else -}}
+    {{- default "default" .Values.serviceAccount.name -}}
+{{- end -}}
 {{- end -}}
 
 {{/* 元数据标签生成 */}}
@@ -62,13 +69,15 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 {{- define "chatwoot.cache.host" -}}{{ if .Values.redis.enabled }}{{ printf "%s-redis-master" .Release.Name }}{{ else }}{{ .Values.redis.host }}{{ end }}{{ end -}}
 {{- define "chatwoot.cache.port" -}}{{ default "6379" .Values.redis.port }}{{ end -}}
 
-{{/* 核心定义块 (Pod & Env) */}}
+{{/* 核心规范块 (Pod) */}}
 {{- define "chatwoot.pod.common" -}}
 {{- with .Values.imagePullSecrets }}imagePullSecrets: {{ toYaml . | nindent 2 }}{{ end }}
 {{- with (default .Values.affinity .Values.global.affinity) }}affinity: {{ toYaml . | nindent 2 }}{{ end }}
+serviceAccountName: {{ include "chatwoot.serviceAccountName" . }}
 volumes: [{name: cache, emptyDir: {}}]
 {{- end -}}
 
+{{/* 环境变量块 */}}
 {{- define "chatwoot.env.common" -}}
 {{- include "chatwoot.storage.env" . }}
 {{- if .Values.postgresql.auth.existingSecret -}}
@@ -77,5 +86,8 @@ volumes: [{name: cache, emptyDir: {}}]
 {{- if .Values.redis.auth.existingSecret -}}
 - {name: REDIS_PASSWORD, valueFrom: {secretKeyRef: {name: {{ .Values.redis.auth.existingSecret }}, key: {{ default "password" .Values.redis.auth.existingSecretPasswordKey | quote }}}}}
 {{- end }}
-envFrom: [{secretRef: {name: "{{ include "chatwoot.full" . }}-env"}}]
+{{- end -}}
+
+{{- define "chatwoot.envFrom.common" -}}
+- {secretRef: {name: "{{ include "chatwoot.full" . }}-env"}}
 {{- end -}}

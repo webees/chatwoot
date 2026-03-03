@@ -29,7 +29,10 @@ spec:
           command: [docker/entrypoints/rails.sh]
           args: [bundle, exec, rails, s, -p, "{{ .Values.services.internalPort }}", -b, 0.0.0.0]
           ports: [{containerPort: {{ .Values.services.internalPort }} }]
-          env: {{- include "chatwoot.env.common" . | nindent 12 }}
+          env:
+            {{- include "chatwoot.env.common" . | nindent 12 }}
+          envFrom:
+            {{- include "chatwoot.envFrom.common" . | nindent 12 }}
           volumeMounts: [{name: cache, mountPath: /app/tmp}]
           {{- with .Values.web.resources }}
           resources: {{ toYaml . | nindent 12 }}
