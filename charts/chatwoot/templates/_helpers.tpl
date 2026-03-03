@@ -84,15 +84,21 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 imagePullSecrets:
   {{- toYaml . | nindent 2 }}
 {{- end }}
-{{- if .Values.affinity }}
 affinity:
+  nodeAffinity:
+    preferredDuringSchedulingIgnoredDuringExecution:
+      - weight: 100
+        preference:
+          matchExpressions:
+            - key: worker
+              operator: In
+              values:
+                - "true"
+  {{- if .Values.affinity }}
   {{- toYaml .Values.affinity | nindent 2 }}
-{{- else if .Values.global.affinity }}
-affinity:
+  {{- else if .Values.global.affinity }}
   {{- toYaml .Values.global.affinity | nindent 2 }}
-{{- end }}
-nodeSelector:
-  worker: "true"
+  {{- end }}
 serviceAccountName: {{ include "chatwoot.serviceAccountName" . }}
 volumes:
   - name: cache

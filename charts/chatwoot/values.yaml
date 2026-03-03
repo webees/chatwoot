@@ -48,7 +48,16 @@ postgresql:
       userPasswordKey: "postgres-password"
   primary:
     persistence: { enabled: true, size: 1Gi, accessModes: [ReadWriteOnce] }
-    nodeSelector: { worker: "true" }
+    affinity:
+      nodeAffinity:
+        preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            preference:
+              matchExpressions:
+                - key: worker
+                  operator: In
+                  values:
+                    - "true"
   resources: { limits: { memory: 512Mi }, requests: { memory: 256Mi } }
 
 redis:
@@ -58,9 +67,27 @@ redis:
   auth: { password: redis }
   master:
     persistence: { enabled: false, medium: Memory }
-    nodeSelector: { worker: "true" }
+    affinity:
+      nodeAffinity:
+        preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            preference:
+              matchExpressions:
+                - key: worker
+                  operator: In
+                  values:
+                    - "true"
   replica:
-    nodeSelector: { worker: "true" }
+    affinity:
+      nodeAffinity:
+        preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            preference:
+              matchExpressions:
+                - key: worker
+                  operator: In
+                  values:
+                    - "true"
   resources: { limits: { memory: 256Mi }, requests: { memory: 128Mi } }
 
 # --- [ 7. 网络接入 ] ---
