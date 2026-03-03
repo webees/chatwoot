@@ -42,7 +42,7 @@ spec:
             pathType: {{ .pathType }}
             backend:
               service:
-                name: {{ .backend.service.name }}
+                name: {{ include "chatwoot.fullname" $ }}
                 port:
                   number: {{ int .backend.service.port.number }}
           {{- end }}
