@@ -38,9 +38,9 @@ When resolving conflicts, ensure the following local logic is preserved:
 
 ### 2. Redis Performance (Memory-Only Mode)
 Designed for ephemeral cache/queue usage without persistent disk overhead.
+*   **Architecture**: Switched to `architecture: standalone` to completely remove replica logic and Pods.
 *   **Persistence**: Disabled (`persistence.enabled: false`).
 *   **Storage**: Uses `emptyDir` with `medium: Memory` (tmpfs).
-*   **Optimization**: `replicaCount` is set to `0` as Chatwoot only utilizes the Master node.
 *   **Config Location**: `values.yaml` -> `redis` section.
 
 ### 3. ARM64 Architecture Support
