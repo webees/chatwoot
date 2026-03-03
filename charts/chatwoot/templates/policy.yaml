@@ -39,9 +39,9 @@ spec:
             cidr: 0.0.0.0/0
     {{- end }}
 {{- end }}
+{{- if .Values.podDisruptionBudget.enabled }}
 ---
 {{/* --- [ 2. Pod 干扰预算 (PDB) ] --- */}}
-{{- if .Values.podDisruptionBudget.enabled -}}
 {{- range $role := list "web" "worker" }}
 apiVersion: policy/v1
 kind: PodDisruptionBudget
@@ -58,11 +58,11 @@ spec:
 ---
 {{- end }}
 {{- end }}
----
-{{/* --- [ 3. 水平自动扩缩容 (HPA) ] --- */}}
 {{- range $role := list "web" "worker" }}
 {{- $cfg := index $.Values $role }}
 {{- if $cfg.hpa.enabled }}
+---
+{{/* --- [ 3. 水平自动扩缩容 (HPA) ] --- */}}
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
@@ -83,13 +83,12 @@ spec:
         target:
           type: Utilization
           averageUtilization: {{ $cfg.hpa.cputhreshold }}
----
 {{- end }}
 {{- end }}
----
-{{/* --- [ 4. 垂直自动扩缩容 (VPA) - v3.3 New!] --- */}}
 {{- if .Values.vpa.enabled }}
 {{- range $role := list "web" "worker" }}
+---
+{{/* --- [ 4. 垂直自动扩缩容 (VPA) ] --- */}}
 apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
 metadata:
@@ -112,6 +111,5 @@ spec:
         maxAllowed:
           cpu: 1
           memory: 2Gi
----
 {{- end }}
 {{- end }}
