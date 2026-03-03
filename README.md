@@ -1,31 +1,32 @@
-# ⚛️ Chatwoot: 极客原子版 (Geek Atomic Edition)
-> **极致精简 · 原子架构 · 全场景自适应**
+# ⚛️ Chatwoot: 极客进化版 (Geek Evolution v3.4)
+> **极简模块化 · 智能配置 · 持续版本管理**
 
-本项目是基于 Chatwoot 的 **v3.0 原子化重构版本**。我们打破了官方繁琐的文件堆砌，将整个应用抽象为四个核心维度，实现了极客级的部署体验。
+本项目是 Chatwoot Helm Chart 的 **v3.4 深度进化版本**。我们摒弃了传统 Chart 的臃肿，实现了高度抽象与自动化。
 
-## 🧬 v3.0 原子架构
+## 🧬 v3.4 模块化架构
 
-- **`app.yaml` (核心核聚变)**：将 Secret、Web、Worker、Service、Ingress 全部融合，利用 Helm 逻辑实现代码 0 冗余。
-- **`policy.yaml` (治理网格)**：一站式管理 HPA 弹性、PDB 鲁棒性和 NetworkPolicy 零信任安全。
-- **`global.mode` (双态切换)**：
-    - `production`: 自动双副本、高可用，适合生产环境。
-    - `lite`: 自动单 Pod、低资源，适合开发与基准测试。
-- **`_helpers.tpl` (逻辑引擎)**：全自动推导副本数和资源配额，让 `values.yaml` 保持极度纯净。
+为了兼顾“极简”与“可维护性”，我们将应用解构为以下四个核心维度：
 
-## 🚀 极客级快速开始
+- **`base.yaml` (基础单元)**：管理 Secret 环境变量与 ServiceAccount 身份。
+- **`web.yaml` (应用单元)**：将 Web Deployment 与其访问 Service 垂直整合，确保组件自治。
+- **`worker.yaml` (任务单元)**：独立的 Sidekiq 异步处理单元，支持独立扩缩容。
+- **`policy.yaml` (治理网格)**：一站式管控 HPA 弹性、PDB 鲁棒性与 NetworkPolicy 零信任安全。
+
+## 🚀 核心极客特性
+
+- **`global.mode` (环境双态)**：一键切换 `production`（高可用）与 `lite`（轻量级）模式。
+- **智能存储引擎**：通过 `values.yaml` 中的对象化配置，自动生成 S3/GCS 等存储环境。
+- **自动资源优化**：内嵌 VPA (Vertical Pod Autoscaler) 支持，让应用具备“新陈代谢”般的自愈能力。
+- **持续版本管理**：集成 CI 自动化流，每次代码推送自动升级版本并发布 Release。
+
+## � 运维指令
 
 ```bash
-# 原子化部署
+# 智能部署
 helm upgrade chatwoot ./charts/chatwoot \
   --install --wait --atomic \
   --set global.mode=production
 ```
-
-## 🛠 维护者视角
-
-- **极致合并**：删除了上游 70% 的样板文件，代码维护量降低 50%。
-- **零信任预装**：无需额外配置，自动开启 Pod 级流量治理。
-- **精简 Value**：`values.yaml` 仅保留 60 行，每个字节都具备生产意义。
 
 ## 🛡 开源协议
 基于 MIT 协议分发。详见 [LICENSE](./LICENSE)。
