@@ -1,0 +1,72 @@
+suite: test local customizations
+templates:
+  - web-deployment.yaml
+  - worker-deployment.yaml
+  - hpa.yaml
+  - values.yaml
+  - Chart.yaml
+release:
+  name: chatwoot-release
+  namespace: default
+tests:
+  - it: should have fullnameOverride applied
+    set:
+      fullnameOverride: "chatwoot"
+    template: web-deployment.yaml
+    asserts:
+      - equal:
+          path: metadata.name
+          value: chatwoot-web
+
+  - it: should have worker affinity by default
+    template: web-deployment.yaml
+    asserts:
+      - exists:
+          path: spec.template.spec.affinity.nodeAffinity.requiredDuringSchedulingIgnoredDuringExecution.nodeSelectorTerms[0].matchExpressions[0]
+      - equal:
+          path: spec.template.spec.affinity.nodeAffinity.requiredDuringSchedulingIgnoredDuringExecution.nodeSelectorTerms[0].matchExpressions[0].key
+          value: worker
+
+  - it: should have topologySpreadConstraints for HA
+    template: web-deployment.yaml
+    set:
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: DoNotSchedule
+          labelSelector:
+            matchLabels:
+              app: chatwoot
+    asserts:
+      - equal:
+          path: spec.template.spec.topologySpreadConstraints[0].maxSkew
+          value: 1
+
+  - it: should have hpa enabled for both web and worker when configured
+    set:
+      web:
+        hpa:
+          enabled: true
+          minpods: 1
+          maxpods: 5
+          cputhreshold: 80
+          memorythreshold: 80
+      worker:
+        hpa:
+          enabled: true
+          minpods: 2
+          maxpods: 6
+          cputhreshold: 70
+          memorythreshold: 70
+    template: hpa.yaml
+    asserts:
+      - hasDocuments:
+          count: 2
+      - equal:
+          path: spec.minReplicas
+          value: 1
+        documentIndex: 0
+      - equal:
+          path: spec.minReplicas
+          value: 2
+        documentIndex: 1
