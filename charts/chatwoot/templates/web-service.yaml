@@ -4,11 +4,8 @@ metadata:
   name: {{ template "chatwoot.fullname" . }}
   creationTimestamp: null
   labels:
-    app: {{ template "chatwoot.fullname" . }}
-    chart: "{{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}"
-    release: "{{ .Release.Name }}"
-    heritage: "{{ .Release.Service }}"
-  {{- with .Values.services.annotations }}
+    {{- include "chatwoot.labels" . | nindent 4 }}
+    {{- with .Values.services.annotations }}
   annotations:
     {{- toYaml . | nindent 4 }}
     {{- end }}
@@ -19,7 +16,5 @@ spec:
       targetPort: {{ int .Values.services.targetPort }}
   type: {{ .Values.services.type }}
   selector:
-    app: {{ template "chatwoot.fullname" . }}
+    {{- include "chatwoot.selectorLabels" . | nindent 4 }}
     role: web
-status:
-  loadBalancer: {}

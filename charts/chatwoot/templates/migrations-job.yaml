@@ -3,10 +3,7 @@ kind: Job
 metadata:
   name: "{{ template "chatwoot.fullname" . }}-migrate"
   labels:
-    app: {{ template "chatwoot.fullname" . }}
-    chart: "{{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}"
-    release: "{{ .Release.Name }}"
-    heritage: "{{ .Release.Service }}"
+    {{- include "chatwoot.labels" . | nindent 4 }}
   annotations:
     # This is what defines this resource as a hook. Without this line, the
     # job is considered part of the release.
@@ -54,6 +51,3 @@ spec:
       {{- if .Values.securityContext }}
       securityContext: {{ .Values.securityContext | toYaml | nindent 8 }}
       {{- end }}
-      volumes:
-        - name: cache
-          emptyDir: {}

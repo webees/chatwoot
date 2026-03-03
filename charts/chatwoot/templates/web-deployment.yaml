@@ -4,16 +4,13 @@ metadata:
   name: {{ template "chatwoot.fullname" . }}-web
   creationTimestamp: null
   labels:
-    app: {{ template "chatwoot.fullname" . }}
-    chart: "{{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}"
-    release: "{{ .Release.Name }}"
-    heritage: "{{ .Release.Service }}"
+    {{- include "chatwoot.labels" . | nindent 4 }}
+    role: web
 spec:
   replicas: {{ int .Values.web.replicaCount }}
   selector:
     matchLabels:
-      app: {{ template "chatwoot.fullname" . }}
-      release: "{{ .Release.Name }}"
+      {{- include "chatwoot.selectorLabels" . | nindent 6 }}
       role: web
   strategy:
     type: RollingUpdate
@@ -24,8 +21,7 @@ spec:
     metadata:
       creationTimestamp: null
       labels:
-        app: {{ template "chatwoot.fullname" . }}
-        release: "{{ .Release.Name }}"
+        {{- include "chatwoot.selectorLabels" . | nindent 8 }}
         role: web
       annotations:
         checksum/config: {{ include (print $.Template.BasePath "/env-secret.yaml") . | sha256sum }}
@@ -49,7 +45,7 @@ spec:
           env:
           {{- include "chatwoot.envCommon" . | nindent 10 }}
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
-          name: {{ .Chart.Name }}-web
+          name: web
           ports:
             - containerPort: {{ int .Values.services.internalPort }}
           imagePullPolicy: {{ .Values.image.pullPolicy }}
@@ -83,7 +79,4 @@ spec:
       {{- if .Values.securityContext }}
       securityContext: {{ .Values.securityContext | toYaml | nindent 8 }}
       {{- end }}
-      volumes:
-        - name: cache
-          emptyDir: {}
 
