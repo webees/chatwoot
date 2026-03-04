@@ -48,5 +48,5 @@ tests:
     documentIndex: 0
     asserts:
       - equal:
-          path: spec.template.spec.nodeSelector.worker
-          value: "true"
+          path: spec.template.spec.affinity.nodeAffinity.requiredDuringSchedulingIgnoredDuringExecution.nodeSelectorTerms[0].matchExpressions[0].key
+          value: "worker"

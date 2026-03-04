@@ -3,7 +3,7 @@
 kind: NetworkPolicy
 apiVersion: networking.k8s.io/v1
 metadata:
-  name: {{ include "chatwoot.full" . }}-{{ .Release.Name }}-boundary
+  name: {{ include "chatwoot.full" . }}-boundary
   labels:
     {{- include "chatwoot.labels" . | nindent 4 }}
 spec:

@@ -2,7 +2,7 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "chatwoot.full" . }}-worker
+  name: {{ include "chatwoot.app.full" . }}-worker
   labels:
     {{- include "chatwoot.labels" . | nindent 4 }}
     role: worker

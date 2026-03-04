@@ -16,6 +16,26 @@
 {{- end -}}
 {{- end -}}
 
+{{/* --- [ 极客迁移引擎: 动态桥接逻辑 ] --- */}}
+{{/* 获取旧实例的基础名称 (优先取配置，没填取 Release.Name) */}}
+{{- define "chatwoot.migration.legacyName" -}}
+{{- default .Release.Name .Values.migration.legacyInstanceName -}}
+{{- end -}}
+
+{{/* 动态生成旧版 PVC 名称 */}}
+{{- define "chatwoot.migration.pvc" -}}
+{{- if .Values.migration.enabled -}}
+{{- printf "data-%s-chatwoot-postgresql-0" (include "chatwoot.migration.legacyName" .) -}}
+{{- end -}}
+{{- end -}}
+
+{{/* 动态生成旧版 Secret 名称 */}}
+{{- define "chatwoot.migration.secret" -}}
+{{- if .Values.migration.enabled -}}
+{{- printf "%s-chatwoot-postgresql" (include "chatwoot.migration.legacyName" .) -}}
+{{- end -}}
+{{- end -}}
+
 {{/* 
 存储配置生成器 (Geek Edition)
 */}}
@@ -46,9 +66,16 @@
 
 {{/* 核心命名块 */}}
 {{- define "chatwoot.name" -}}{{ default .Chart.Name .Values.nameOverride | trunc 63 | trimSuffix "-" }}{{- end -}}
+{{/* 返回完整前缀 (e.g., chatwoot-2-1766892187) - 针对子 Chart (Redis/PG) 挂载 */}}
 {{- define "chatwoot.full" -}}
 {{- if .Values.fullnameOverride }}{{ .Values.fullnameOverride | trunc 63 | trimSuffix "-" }}
+{{- else if contains .Chart.Name .Release.Name }}{{ .Release.Name }}
 {{- else }}{{ printf "%s-%s" .Release.Name (include "chatwoot.name" .) | trunc 63 | trimSuffix "-" }}{{ end -}}
+{{- end -}}
+
+{{/* 返回 App 前缀 - 此时已与 full 行为一致 */}}
+{{- define "chatwoot.app.full" -}}
+{{- include "chatwoot.full" . }}
 {{- end -}}
 
 {{- define "chatwoot.serviceAccountName" -}}
@@ -72,10 +99,20 @@ app.kubernetes.io/name: {{ include "chatwoot.name" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end -}}
 
-{{/* 基础设施连接检测 */}}
-{{- define "chatwoot.db.host" -}}{{ if .Values.postgresql.enabled }}{{ printf "%s-postgresql" .Release.Name }}{{ else }}{{ .Values.postgresql.postgresqlHost }}{{ end }}{{ end -}}
+{{/* 基础设施连接检测: 极客版原子化命名 (ReleaseName 改名为 chatwoot) */}}
+{{- define "chatwoot.db.host" -}}
+{{- if .Values.postgresql.postgresqlHost }}{{ .Values.postgresql.postgresqlHost }}
+{{- else if .Values.postgresql.enabled }}{{ printf "chatwoot-postgresql" }}
+{{- else }}localhost{{ end -}}
+{{- end -}}
+
 {{- define "chatwoot.db.port" -}}{{ default "5432" .Values.postgresql.postgresqlPort }}{{ end -}}
-{{- define "chatwoot.cache.host" -}}{{ if .Values.redis.enabled }}{{ printf "%s-redis-master" .Release.Name }}{{ else }}{{ .Values.redis.host }}{{ end }}{{ end -}}
+
+{{- define "chatwoot.cache.host" -}}
+{{- if .Values.redis.host }}{{ .Values.redis.host }}
+{{- else if .Values.redis.enabled }}{{ printf "chatwoot-redis-master" }}
+{{- else }}localhost{{ end -}}
+{{- end -}}
 {{- define "chatwoot.cache.port" -}}{{ default "6379" .Values.redis.port }}{{ end -}}
 
 {{/* 核心规范块 (Pod) */}}
@@ -87,11 +124,14 @@ imagePullSecrets:
 affinity:
   {{- if .Values.affinity }}
   {{- toYaml .Values.affinity | nindent 2 }}
-  {{- else if .Values.global.affinity }}
-  {{- toYaml .Values.global.affinity | nindent 2 }}
+  {{- else }}
+  nodeAffinity:
+    requiredDuringSchedulingIgnoredDuringExecution:
+      nodeSelectorTerms:
+        - matchExpressions:
+            - key: worker
+              operator: Exists
   {{- end }}
-nodeSelector:
-  worker: "true"
 serviceAccountName: {{ include "chatwoot.serviceAccountName" . }}
 volumes:
   - name: cache
@@ -106,11 +146,15 @@ volumes:
 {{/* 环境变量块 */}}
 {{- define "chatwoot.env.common" -}}
 {{- include "chatwoot.storage.env" . }}
-{{- if .Values.postgresql.auth.existingSecret }}
+{{- $secretName := .Values.postgresql.auth.existingSecret -}}
+{{- if and (not $secretName) .Values.migration.enabled -}}
+  {{- $secretName = include "chatwoot.migration.secret" . -}}
+{{- end -}}
+{{- if $secretName }}
 - name: POSTGRES_PASSWORD
   valueFrom:
     secretKeyRef:
-      name: {{ .Values.postgresql.auth.existingSecret | quote }}
+      name: {{ $secretName | quote }}
       key: {{ default "password" .Values.postgresql.auth.secretKeys.adminPasswordKey | quote }}
 {{- end }}
 {{- if .Values.redis.auth.existingSecret }}

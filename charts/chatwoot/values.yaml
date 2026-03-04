@@ -37,38 +37,75 @@ podDisruptionBudget: { enabled: false }
 # --- [ 6. 基础设施 ] ---
 postgresql:
   enabled: true
+  fullnameOverride: "chatwoot-postgresql"
   image: { registry: docker.io, repository: pgvector/pgvector, tag: pg16 }
   auth:
     username: postgres
     database: chatwoot_production
-    # 极客技巧：通过 existingSecret 引用现有密码，跳过 Bitnami 的升级校验报错
-    existingSecret: "chatwoot-2-1766892187-postgresql"
+    # 原子化命名：升级后将使用 chatwoot-postgresql-password 这个干净的 Secret 名
+    existingSecret: "chatwoot-postgresql-auth"
     secretKeys:
       adminPasswordKey: "postgres-password"
       userPasswordKey: "postgres-password"
   primary:
-    persistence: { enabled: true, size: 1Gi, accessModes: [ReadWriteOnce] }
-    nodeSelector: { worker: "true" }
+    persistence:
+      enabled: true
+      size: 1Gi
+      accessModes: [ReadWriteOnce]
+      # 极客迁移开启：不再指向带 ID 的 PVC，而是指向我们即将创建的干净 PVC
+      existingClaim: "chatwoot-postgresql-data"
+    affinity:
+      nodeAffinity:
+        requiredDuringSchedulingIgnoredDuringExecution:
+          nodeSelectorTerms:
+            - matchExpressions:
+                - key: worker
+                  operator: Exists
+                - key: longhorn
+                  operator: Exists
   resources: { limits: { memory: 512Mi }, requests: { memory: 256Mi } }
 
 redis:
   enabled: true
+  fullnameOverride: "chatwoot-redis"
   architecture: standalone
   image: { registry: docker.io, repository: library/redis, tag: "7.4" }
-  auth: { password: redis }
+  auth:
+    existingSecret: "chatwoot-redis-auth"
+    existingSecretPasswordKey: "redis-password"
   master:
     persistence: { enabled: false, medium: Memory }
-    nodeSelector: { worker: "true" }
+    affinity:
+      nodeAffinity:
+        requiredDuringSchedulingIgnoredDuringExecution:
+          nodeSelectorTerms:
+            - matchExpressions:
+                - key: worker
+                  operator: Exists
+                - key: longhorn
+                  operator: Exists
   replica:
-    nodeSelector: { worker: "true" }
-  resources: { limits: { memory: 256Mi }, requests: { memory: 128Mi } }
+    affinity:
+      nodeAffinity:
+        requiredDuringSchedulingIgnoredDuringExecution:
+          nodeSelectorTerms:
+            - matchExpressions:
+                - key: worker
+                  operator: Exists
+                - key: longhorn
+                  operator: Exists
 
 # --- [ 7. 网络接入 ] ---
-service: { type: LoadBalancer, port: 80 }
+service: { type: ClusterIP, port: 3000 }
 services: { internalPort: 3000, targetPort: 3000 }
 ingress:
-  enabled: false
-  hosts: [{ host: "", paths: [{ path: /, pathType: Prefix }] }]
+  enabled: true
+  nameOverride: "chatwoot-ingress"
+  hosts:
+    - host: "chat.example.com"
+      paths:
+        - path: /
+          pathType: Prefix
 
 # --- [ 8. 元数据与生命周期 ] ---
 fullnameOverride: "chatwoot"
@@ -76,6 +113,10 @@ serviceAccount: { create: true }
 hooks:
   migrate: { hookAnnotation: "post-install,post-upgrade" }
 
+# --- [ 9. 智能迁移工具 ] ---
+migration:
+  enabled: true # 开启后将自动接管 Release 名称对应的旧磁盘和 Secret
+  legacyInstanceName: "" # 如不填，则自动使用 .Release.Name
 env:
   DEFAULT_LOCALE: zh-CN
   INSTALLATION_ENV: helm
@@ -83,3 +124,5 @@ env:
   RAILS_LOG_TO_STDOUT: true
   SMTP_ADDRESS: smtp.gmail.com
   SMTP_PORT: 587
+  FRONTEND_URL: https://chat.example.com
+  # SECRET_KEY_BASE: 通过 values.override.yaml 或 --set 传入，禁止提交到仓库

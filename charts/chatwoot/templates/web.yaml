@@ -2,7 +2,7 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "chatwoot.full" . }}-web
+  name: {{ include "chatwoot.app.full" . }}-web
   labels:
     {{- include "chatwoot.labels" . | nindent 4 }}
     role: web
@@ -57,9 +57,10 @@ spec:
               path: /api
               port: {{ .Values.services.internalPort }}
             initialDelaySeconds: 15
-            periodSeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 5
             successThreshold: 1
-            failureThreshold: 5
+            failureThreshold: 10
       securityContext:
         runAsNonRoot: true
         runAsUser: 1000
@@ -75,7 +76,8 @@ metadata:
 spec:
   type: {{ .Values.service.type }}
   ports:
-    - port: {{ .Values.service.port }}
+    - name: http
+      port: {{ .Values.service.port }}
       targetPort: {{ .Values.services.targetPort }}
       protocol: TCP
   selector:
