@@ -17,7 +17,7 @@ tests:
       - matchRegex:
           path: spec.template.spec.initContainers[0].args[1]
           # Match the expanded script but keep it flexible
-          pattern: "pg_isready -h chatwoot-release-postgresql"
+          pattern: "pg_isready -h chatwoot-postgresql"
 
   - it: should render environment secret correctly
     template: base.yaml
@@ -48,5 +48,5 @@ tests:
     template: job.migrate.yaml
     asserts:
       - equal:
-          path: spec.template.spec.nodeSelector.worker
-          value: "true"
+          path: spec.template.spec.affinity.nodeAffinity.requiredDuringSchedulingIgnoredDuringExecution.nodeSelectorTerms[0].matchExpressions[0].key
+          value: "worker"
