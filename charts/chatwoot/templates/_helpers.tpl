@@ -124,6 +124,8 @@ imagePullSecrets:
 affinity:
   {{- if .Values.affinity }}
   {{- toYaml .Values.affinity | nindent 2 }}
+  {{- else if .Values.global.affinity }}
+  {{- toYaml .Values.global.affinity | nindent 2 }}
   {{- else }}
   nodeAffinity:
     requiredDuringSchedulingIgnoredDuringExecution:
