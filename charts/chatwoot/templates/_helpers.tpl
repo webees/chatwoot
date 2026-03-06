@@ -133,6 +133,8 @@ affinity:
         - matchExpressions:
             - key: worker
               operator: Exists
+            - key: longhorn
+              operator: Exists
   {{- end }}
 serviceAccountName: {{ include "chatwoot.serviceAccountName" . }}
 volumes:
@@ -143,6 +145,9 @@ volumes:
       {{- else }}
       {}
       {{- end }}
+  - name: storage
+    persistentVolumeClaim:
+      claimName: chatwoot-storage
 {{- end -}}
 
 {{/* 环境变量块 */}}
