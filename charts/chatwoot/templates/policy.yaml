@@ -59,7 +59,9 @@ spec:
 {{- end }}
 {{- range $role := list "web" "worker" }}
 {{- $cfg := index $.Values $role }}
-{{- if $cfg.hpa.enabled }}
+{{/* 安全审计：如果已开启 VPA 自动调整，则强制禁用对应角色的 HPA，防止扩缩容冲突 */}}
+{{- $vpaEnabled := and $.Values.vpa.enabled (or (eq (default "Auto" $.Values.vpa.updateMode) "Auto") (eq (default "" $.Values.vpa.updateMode) "Recreate")) -}}
+{{- if and $cfg.hpa.enabled (not $vpaEnabled) }}
 ---
 {{/* --- [ 3. 水平自动扩缩容 (HPA) ] --- */}}
 apiVersion: autoscaling/v2

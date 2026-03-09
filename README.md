@@ -1,4 +1,4 @@
-# ⚛️ Chatwoot: 极客进化版 (Geek Evolution v3.9)
+# ⚛️ Chatwoot: 极客进化版 (Geek v3.3 Evolution)
 > **严苛 CI/CD · 零停机升级 · 模块化安全治理**
 
 本项目是 Chatwoot Helm Chart 的 **v3.4 深度进化版本**。我们摒弃了传统 Chart 的臃肿，实现了高度抽象与自动化。
