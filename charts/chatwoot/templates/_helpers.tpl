@@ -145,14 +145,17 @@ volumes:
       {{- else }}
       {}
       {{- end }}
+  {{- if .Values.persistence.enabled }}
   - name: storage
     persistentVolumeClaim:
       claimName: chatwoot-storage
+  {{- end }}
 {{- end -}}
 
 {{/* 环境变量块 */}}
 {{- define "chatwoot.env.common" -}}
 {{- include "chatwoot.storage.env" . }}
+{{- if .Values.postgresql.enabled -}}
 {{- $secretName := .Values.postgresql.auth.existingSecret -}}
 {{- if and (not $secretName) .Values.migration.enabled -}}
   {{- $secretName = include "chatwoot.migration.secret" . -}}
@@ -164,7 +167,8 @@ volumes:
       name: {{ $secretName | quote }}
       key: {{ default "password" .Values.postgresql.auth.secretKeys.adminPasswordKey | quote }}
 {{- end }}
-{{- if .Values.redis.auth.existingSecret }}
+{{- end }}
+{{- if and .Values.redis.enabled .Values.redis.auth.existingSecret }}
 - name: REDIS_PASSWORD
   valueFrom:
     secretKeyRef:

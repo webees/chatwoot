@@ -38,6 +38,10 @@ spec:
           volumeMounts:
             - name: cache
               mountPath: /app/tmp
+            {{- if .Values.persistence.enabled }}
+            - name: storage
+              mountPath: /app/storage
+            {{- end }}
           {{- if .Values.worker.resources }}
           resources:
             {{- toYaml .Values.worker.resources | nindent 12 }}

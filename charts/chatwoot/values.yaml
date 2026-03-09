@@ -15,13 +15,22 @@ vpa:
   enabled: false
   updateMode: "Auto" # 选项: Auto, Off (仅推荐), Recreate
 
-# --- [ 3. 智能存储引擎 ] ---
+# --- [ 3. 智能存储引擎 (v3.2 New!) ] ---
 storage:
   type: local # local | s3 | gcs
   s3: { bucket: "", region: "", accessKeyId: "", secretAccessKey: "" }
   gcs: { bucket: "", project: "" }
 
-# --- [ 4. 极简负载配置 ] ---
+# --- [ 4. 数据持久化 (v3.4 New!) ] ---
+# 极客进化：针对 uploads/ 目录配置持久化存储
+persistence:
+  enabled: true
+  size: 10Gi
+  accessModes: [ReadWriteOnce]
+  storageClass: "" # 不填则使用默认 StorageClass
+  annotations: {}
+
+# --- [ 5. 极简负载配置 ] ---
 web:
   resources: { limits: { cpu: 500m, memory: 512Mi }, requests: { cpu: 100m, memory: 256Mi } }
   hpa: { enabled: false, minpods: 1, maxpods: 10, cputhreshold: 75 }
@@ -35,65 +44,24 @@ networkPolicy: { enabled: true, allowExternalEgress: true }
 podDisruptionBudget: { enabled: false }
 
 # --- [ 6. 基础设施 ] ---
+# 外部 CNPG PostgreSQL (通过 PgBouncer 连接池)
 postgresql:
-  enabled: true
-  fullnameOverride: "chatwoot-postgresql"
-  image: { registry: docker.io, repository: pgvector/pgvector, tag: pg16 }
+  enabled: false
+  postgresqlHost: "pg-pooler-rw.cnpg.svc.cluster.local"
+  postgresqlPort: "5432"
   auth:
-    username: postgres
-    database: chatwoot_production
-    # 原子化命名：升级后将使用 chatwoot-postgresql-password 这个干净的 Secret 名
-    existingSecret: "chatwoot-postgresql-auth"
-    secretKeys:
-      adminPasswordKey: "postgres-password"
-      userPasswordKey: "postgres-password"
-  primary:
-    persistence:
-      enabled: true
-      size: 1Gi
-      accessModes: [ReadWriteOnce]
-      # 极客迁移开启：不再指向带 ID 的 PVC，而是指向我们即将创建的干净 PVC
-      existingClaim: "chatwoot-postgresql-data"
-    affinity:
-      nodeAffinity:
-        requiredDuringSchedulingIgnoredDuringExecution:
-          nodeSelectorTerms:
-            - matchExpressions:
-                - key: worker
-                  operator: Exists
-                - key: longhorn
-                  operator: Exists
-  resources: { limits: { memory: 512Mi }, requests: { memory: 256Mi } }
+    username: chatwoot
+    database: chatwoot
 
+# 外部 Valkey HA (Sentinel 3 节点)
 redis:
-  enabled: true
-  fullnameOverride: "chatwoot-redis"
-  architecture: standalone
-  image: { registry: docker.io, repository: library/redis, tag: "7.4" }
+  enabled: false
+  host: "valkey.valkey.svc.cluster.local"
+  port: "6379"
   auth:
-    existingSecret: "chatwoot-redis-auth"
-    existingSecretPasswordKey: "redis-password"
+    existingSecret: ""
   master:
-    persistence: { enabled: false, medium: Memory }
-    affinity:
-      nodeAffinity:
-        requiredDuringSchedulingIgnoredDuringExecution:
-          nodeSelectorTerms:
-            - matchExpressions:
-                - key: worker
-                  operator: Exists
-                - key: longhorn
-                  operator: Exists
-  replica:
-    affinity:
-      nodeAffinity:
-        requiredDuringSchedulingIgnoredDuringExecution:
-          nodeSelectorTerms:
-            - matchExpressions:
-                - key: worker
-                  operator: Exists
-                - key: longhorn
-                  operator: Exists
+    persistence: { medium: Memory }
 
 # --- [ 7. 网络接入 ] ---
 service: { type: ClusterIP, port: 3000 }
