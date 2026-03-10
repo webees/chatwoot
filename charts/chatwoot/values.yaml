@@ -25,8 +25,8 @@ storage:
 # 极客进化：针对 uploads/ 目录配置持久化存储
 persistence:
   enabled: true
-  size: 10Gi
-  accessModes: [ReadWriteOnce]
+  size: 2Gi
+  accessModes: [ReadWriteMany]
   storageClass: "" # 不填则使用默认 StorageClass
   annotations: {}
 
