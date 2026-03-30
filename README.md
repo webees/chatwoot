@@ -1,43 +1,55 @@
-# ⚛️ Chatwoot: 极客进化版 (Geek v3.3 Evolution)
-> **严苛 CI/CD · 零停机升级 · 模块化安全治理**
+# ⚛️ Chatwoot Helm Chart — 极客进化版
 
-本项目是 Chatwoot Helm Chart 的 **v3.4 深度进化版本**。我们摒弃了传统 Chart 的臃肿，实现了高度抽象与自动化。
+> **Chatwoot v4.12.1** · Chart v3.3.30 · 严苛 CI/CD · 零停机升级 · 模块化安全治理
 
-## 🧬 v3.4 模块化架构
+本项目是 [chatwoot/charts](https://github.com/chatwoot/charts) 的**生产级深度定制分支**，基于上游 v2.0.17，保留其有价值的增强，摒弃臃肿与安全短板。
 
-为了兼顾“极简”与“可维护性”，我们将应用解构为以下四个核心维度：
+## 🧬 模块化架构
 
-- **`base.yaml` (基础单元)**：管理 Secret 环境变量与 ServiceAccount 身份。
-- **`web.yaml` (应用单元)**：将 Web Deployment 与其访问 Service 垂直整合，确保组件自治。
-- **`worker.yaml` (任务单元)**：独立的 Sidekiq 异步处理单元，支持独立扩缩容。
-- **`policy.yaml` (治理网格)**：一站式管控 HPA 弹性、PDB 鲁棒性与 NetworkPolicy 零信任安全。
+| 模板 | 职责 |
+|------|------|
+| `base.yaml` | Secret 环境变量 + ServiceAccount 身份 |
+| `web.yaml` | Web Deployment + Service（垂直整合） |
+| `worker.yaml` | Sidekiq 异步处理单元（独立扩缩容） |
+| `policy.yaml` | HPA/VPA 弹性 + PDB 鲁棒性 + NetworkPolicy 零信任 |
+| `persistence.yaml` | 上传文件持久化存储（PVC） |
+| `ingress.yaml` | 流量入口控制 |
+| `job.migrate.yaml` | 数据库自动迁移（post-upgrade hook） |
 
-## 🛡 升级安全与零停机 (v3.5 New!)
+## 🛡 生产加固特性
 
-我们将“安全”贯穿于 Chart 设计的每一行：
+- **节点硬约束**：全组件强制调度到 `worker` + `longhorn` 标签节点
+- **零停机升级**：`RollingUpdate` + `maxUnavailable: 0` + `terminationGracePeriodSeconds: 60`
+- **三级健康检测**：`startupProbe`（5.5 分钟启动窗口）→ `livenessProbe`（/health）→ `readinessProbe`（/api）
+- **安全运行**：Pod 以非 Root 用户运行（UID 1000）
+- **零信任网络**：NetworkPolicy 默认开启，仅允许集群内通信 + DNS + 外部出站
+- **资源治理**：显式 CPU/Memory limits + HPA（CPU + Memory 双维度）+ VPA 可选
+- **PDB 保护**：节点驱逐时保证最小可用副本
+- **外部 Secret 叠加**：`existingEnvSecret` 支持 External Secrets Operator 等外部 Secret 注入
+- **持久化存储**：`persistence` 为 `ACTIVE_STORAGE_SERVICE: local` 提供 PVC 挂载
 
-- **原子化升级**：建议使用 `helm upgrade --atomic`。我们在 `strategy` 中强制设置了 `maxUnavailable: 0`，确保新 Pod 就绪前旧 Pod 不会下线。
-- **优雅停机**：设置了 `terminationGracePeriodSeconds: 60`，给 Rails 和 Sidekiq 充足的时间处理残留请求或任务。
-- **动态就绪检测**：精细化配置了 `liveness` 和 `readiness` 探针，通过 `failureThreshold` 缓冲启动抖动。
-- **分阶段迁移**：数据库迁移任务具备独立的 `nslookup` 检查，确保基础设施完全就绪后再执行 DDL。
-
-## 🚀 核心极客特性
-
-- **`global.mode` (环境双态)**：一键切换 `production`（高可用）与 `lite`（轻量级）模式。
-- **智能存储引擎**：通过 `values.yaml` 中的对象化配置，自动生成 S3/GCS 等存储环境。
-- **自动资源优化**：内嵌 VPA (Vertical Pod Autoscaler) 支持，让应用具备“新陈代谢”般的自愈能力。
-- **终极严密测试 (v3.8)**：构建了覆盖“边界值测试、存储推导、资源配额稳定性、多主机流量治理”的全方位测试矩阵，单元测试量提升 300%。
-- **严苛 CI/CD (v3.6)**：集成合一的 `Lint -> Test -> Release` 流水线，任何单元测试失败都将强制中止发布，确保生产环境 100% 可用。
-- **持续版本管理**：流转自动执行版本号语义化自增，无需手动干预。
-
-## � 运维指令
+## 🚀 快速部署
 
 ```bash
-# 智能部署
+# 前置：节点打标签
+kubectl label node <node-name> worker=true longhorn=true
+
+# 部署（推荐）
 helm upgrade chatwoot ./charts/chatwoot \
-  --install --wait --atomic \
-  --set global.mode=production
+  --install --wait --atomic --timeout 10m \
+  -f charts/chatwoot/values.override.yaml
 ```
 
-## 🛡 开源协议
+> 敏感配置（密码、密钥）通过 `values.override.yaml` 传入，该文件已加入 `.gitignore`。
+
+## 🧪 CI/CD
+
+集成 `Lint → Unit Test (33 cases) → Release` 流水线。任何测试失败都将中止发布。
+
+## 📖 维护指南
+
+详见 [MAINTENANCE.md](./MAINTENANCE.md)。
+
+## 📄 开源协议
+
 基于 MIT 协议分发。详见 [LICENSE](./LICENSE)。
