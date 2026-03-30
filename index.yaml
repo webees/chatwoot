@@ -3,6 +3,41 @@ entries:
   chatwoot:
   - apiVersion: v2
     appVersion: v4.12.1
+    created: "2026-03-30T06:59:31.109921588Z"
+    dependencies:
+    - condition: postgresql.enabled
+      name: postgresql
+      repository: https://charts.bitnami.com/bitnami
+      version: 11.6.7
+    - condition: redis.enabled
+      name: redis
+      repository: https://charts.bitnami.com/bitnami
+      version: 16.12.2
+    - name: common
+      repository: oci://registry-1.docker.io/bitnamicharts
+      version: 2.31.4
+    description: Chatwoot 极客架构版：原子化重构、硬核节点锁定、多实例共存优化 (v3.3.37) ⚛️
+    digest: 8a86d295cc15e68f0ae2321b3a00c02da08b285124c9a8d5cdd506cce2cd2b26
+    home: https://github.com/webees/chatwoot
+    icon: https://chatwoot-public-assets.s3.amazonaws.com/logo/square.png
+    keywords:
+    - chatwoot
+    - minimalism
+    - geek
+    - atomic
+    - hardened
+    maintainers:
+    - name: webees
+    name: chatwoot
+    sources:
+    - https://github.com/chatwoot/chatwoot
+    - https://github.com/chatwoot/charts
+    type: application
+    urls:
+    - https://github.com/webees/chatwoot/releases/download/chatwoot-3.3.37/chatwoot-3.3.37.tgz
+    version: 3.3.37
+  - apiVersion: v2
+    appVersion: v4.12.1
     created: "2026-03-30T06:25:41.581592712Z"
     dependencies:
     - condition: postgresql.enabled
@@ -2045,4 +2080,4 @@ entries:
     urls:
     - https://github.com/webees/chatwoot/releases/download/chatwoot-2.0.9/chatwoot-2.0.9.tgz
     version: 2.0.9
-generated: "2026-03-30T06:25:41.581734206Z"
+generated: "2026-03-30T06:59:31.110125919Z"
