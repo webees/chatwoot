@@ -22,12 +22,7 @@
 {{- default .Release.Name .Values.migration.legacyInstanceName -}}
 {{- end -}}
 
-{{/* 动态生成旧版 PVC 名称 */}}
-{{- define "chatwoot.migration.pvc" -}}
-{{- if .Values.migration.enabled -}}
-{{- printf "data-%s-chatwoot-postgresql-0" (include "chatwoot.migration.legacyName" .) -}}
-{{- end -}}
-{{- end -}}
+
 
 {{/* 动态生成旧版 Secret 名称 */}}
 {{- define "chatwoot.migration.secret" -}}
@@ -73,10 +68,7 @@
 {{- else }}{{ printf "%s-%s" .Release.Name (include "chatwoot.name" .) | trunc 63 | trimSuffix "-" }}{{ end -}}
 {{- end -}}
 
-{{/* 返回 App 前缀 - 此时已与 full 行为一致 */}}
-{{- define "chatwoot.app.full" -}}
-{{- include "chatwoot.full" . }}
-{{- end -}}
+
 
 {{- define "chatwoot.serviceAccountName" -}}
 {{- if .Values.serviceAccount.create -}}
@@ -150,6 +142,10 @@ volumes:
     persistentVolumeClaim:
       claimName: chatwoot-storage
   {{- end }}
+securityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+terminationGracePeriodSeconds: 60
 {{- end -}}
 
 {{/* 环境变量块 */}}

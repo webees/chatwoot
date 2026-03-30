@@ -17,11 +17,7 @@ data:
   {{- end }}
   REDIS_HOST: {{ include "chatwoot.cache.host" . | b64enc | quote }}
   REDIS_PORT: {{ default "6379" .Values.redis.port | toString | b64enc | quote }}
-  {{- if not .Values.redis.auth.existingSecret }}
   REDIS_URL: {{ (printf "redis://%s:%s" (include "chatwoot.cache.host" .) (default "6379" .Values.redis.port | toString)) | b64enc | quote }}
-  {{- else }}
-  REDIS_URL: {{ (printf "redis://%s:%s" (include "chatwoot.cache.host" .) (default "6379" .Values.redis.port | toString)) | b64enc | quote }}
-  {{- end }}
   {{- range $k, $v := .Values.env }}
   {{ $k }}: {{ $v | toString | b64enc | quote }}
   {{- end }}

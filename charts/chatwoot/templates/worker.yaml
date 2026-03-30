@@ -2,7 +2,7 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "chatwoot.app.full" . }}-worker
+  name: {{ include "chatwoot.full" . }}-worker
   labels:
     {{- include "chatwoot.labels" . | nindent 4 }}
     role: worker
@@ -46,7 +46,3 @@ spec:
           resources:
             {{- toYaml .Values.worker.resources | nindent 12 }}
           {{- end }}
-      securityContext:
-        runAsNonRoot: true
-        runAsUser: 1000
-      terminationGracePeriodSeconds: 60
