@@ -7,28 +7,43 @@
 ## 🏗 架构特性
 
 ### 1. 节点调度（硬约束）
-- **强制调度**：所有 Pod（Web、Worker、PG、Redis、Migrate）必须运行在带有 `worker` 和 `longhorn` 标签的节点上
+- **强制调度**：所有 Pod（Web、Worker、Migrate）必须运行在带有 `worker` 和 `longhorn` 标签的节点上
 - **实现方式**：`requiredDuringSchedulingIgnoredDuringExecution` + `operator: Exists`
-- **配置路径**：`_helpers.tpl` → `chatwoot.pod.common`，`values.yaml` → `postgresql.primary.affinity` / `redis.master.affinity`
+- **配置路径**：`_helpers.tpl` → `chatwoot.pod.common`
 
 ### 2. 原子化命名
 - **`fullnameOverride: "chatwoot"`**：资源名称统一为 `chatwoot-web`、`chatwoot-worker` 等
-- **子 Chart 独立命名**：`postgresql.fullnameOverride: "chatwoot-postgresql"`，`redis.fullnameOverride: "chatwoot-redis"`
-- **密码迁移**：PG/Redis 使用 `existingSecret` 引用外部 Secret（`chatwoot-postgresql-auth`、`chatwoot-redis-auth`），解耦 Release 名称
+- **密码管理**：PG/Redis 通过 `values.override.yaml` 中的 `env` 传入，或使用 `existingSecret` 引用外部 Secret
 
-### 3. Redis 全内存模式
-- **架构**：`standalone` 模式，禁用持久化
-- **存储**：`emptyDir` + `medium: Memory` (tmpfs)，零磁盘 I/O
+### 3. 外部基础设施
+- **PostgreSQL**：外部 CNPG 集群 + PgBouncer 连接池（`pg-pooler-rw.cnpg.svc.cluster.local`）
+- **Redis**：外部 Valkey HA（`valkey.valkey.svc.cluster.local`）
+- 内置 Bitnami 子 Chart 默认禁用（`postgresql.enabled: false`, `redis.enabled: false`）
 
-### 4. ARM64 多架构支持
-- **PostgreSQL**：使用 `pgvector/pgvector:pg16` 替代 Bitnami 官方镜像
-- **Redis**：使用 `library/redis:7.4` 官方多架构镜像
+### 4. 三级健康检测
+- **`startupProbe`**：`/health`，最长等待 5.5 分钟，容忍 Rails 冷启动和大版本迁移
+- **`livenessProbe`**：`/health`，启动通过后每 10 秒检测，3 次失败重启
+- **`readinessProbe`**：`/api`（检查 Redis + Postgres 连通性），失败则从 Service 摘除
 
 ### 5. 安全加固
 - Pod 以非 Root 用户运行（UID 1000），禁止权限提升
 - NetworkPolicy 零信任默认开启（仅允许集群内通信 + DNS + 外部出站）
 - 资源限制全组件覆盖（CPU/Memory limits）
 - 敏感配置通过 `values.override.yaml`（已 `.gitignore`）传入，禁止提交仓库
+
+### 6. 持久化存储
+- `persistence.enabled: true`：为 `/app/storage`（上传文件）提供 PVC 挂载
+- Web 和 Worker 共享同一 PVC（`ReadWriteMany`）
+
+### 7. 弹性扩缩
+- **HPA**：支持 CPU + Memory 双维度自动扩缩（默认关闭）
+- **VPA**：支持垂直自动资源调优（默认关闭，开启时自动禁用 HPA 防冲突）
+- **PDB**：节点驱逐保护（默认关闭）
+
+### 8. 外部 Secret 叠加
+- `existingEnvSecret`：在 Chart 管理的 `chatwoot-env` Secret 之后叠加外部 Secret
+- 适用于 External Secrets Operator、Sealed Secrets 等场景
+- 后加载的同名 key 会覆盖前者
 
 ---
 
@@ -45,14 +60,15 @@ git fetch upstream
 git diff main upstream/main  # 先对比差异
 ```
 
-> ⚠️ **切勿**直接 `git merge upstream/main`。使用变基或手动合并，保护以下本地逻辑：
-> - `values.yaml`：调度策略、镜像配置、Secret 引用
+> ⚠️ **切勿**直接 `git merge upstream/main`。手动对比后选择性采纳，保护以下本地逻辑：
+> - `values.yaml`：调度策略、外部基础设施配置、资源限制
 > - `templates/policy.yaml`：NetworkPolicy + PDB + HPA/VPA
 > - `templates/_helpers.tpl`：`chatwoot.pod.common` 中的 affinity 注入
+> - `templates/web.yaml`：startupProbe、securityContext、RollingUpdate 策略
 
 ---
 
-## � 部署操作
+## 🚀 部署操作
 
 ### CLI 部署（推荐）
 ```bash
@@ -69,12 +85,6 @@ helm upgrade chatwoot ./charts/chatwoot \
 ```bash
 # 确保目标节点已打标签
 kubectl label node <node-name> worker=true longhorn=true
-
-# 确保外部 Secret 已创建
-kubectl create secret generic chatwoot-postgresql-auth \
-  --from-literal=postgres-password=<YOUR_PG_PASSWORD> -n chatwoot
-kubectl create secret generic chatwoot-redis-auth \
-  --from-literal=redis-password=<YOUR_REDIS_PASSWORD> -n chatwoot
 ```
 
 ---
@@ -88,7 +98,14 @@ kubectl get pods -n chatwoot -o wide
 # 2. 确认镜像版本正确
 kubectl get pods -n chatwoot -o jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.spec.containers[*].image}{"\n"}{end}'
 
-# 3. 确认 NetworkPolicy 已生效
+# 3. 确认 startupProbe 已生效
+kubectl get deploy chatwoot-web -n chatwoot -o jsonpath='{.spec.template.spec.containers[0].startupProbe.failureThreshold}'
+# 期望输出: 30
+
+# 4. 确认迁移 Job 成功
+kubectl get jobs -n chatwoot | grep migrate
+
+# 5. 确认 NetworkPolicy 已生效
 kubectl get networkpolicy -n chatwoot
 ```
 
