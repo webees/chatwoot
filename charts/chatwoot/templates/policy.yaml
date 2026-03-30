@@ -84,6 +84,12 @@ spec:
         target:
           type: Utilization
           averageUtilization: {{ $cfg.hpa.cputhreshold }}
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: {{ $cfg.hpa.memorythreshold }}
 {{- end }}
 {{- end }}
 {{- if .Values.vpa.enabled }}

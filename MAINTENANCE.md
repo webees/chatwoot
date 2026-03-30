@@ -98,6 +98,7 @@ kubectl get networkpolicy -n chatwoot
 
 | 版本 | 关键变更 |
 |------|----------|
+| **v3.3.30** | 升级 v4.12.1：采纳上游 startupProbe、memory HPA、existingEnvSecret |
 | **v3.3.28** | 原子化命名重构：PG/Redis 独立 `fullnameOverride`，`existingSecret` 解耦 Release 名，Ingress 启用，Service 切换为 ClusterIP |
 | **v3.3.25** | 硬约束锁定：全组件强制 `nodeSelector: { worker: "true" }` |
 | **v3.3.20** | 镜像标准化：PG 切换为 `pgvector/pgvector:pg16`，Redis 切换为 `library/redis:7.4` |

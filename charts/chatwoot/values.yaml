@@ -6,7 +6,7 @@ global:
   mode: production # production | lite
 
 # --- [ 1. 核心镜像 ] ---
-image: { repository: chatwoot/chatwoot, tag: v4.11.1, pullPolicy: IfNotPresent }
+image: { repository: chatwoot/chatwoot, tag: v4.12.1, pullPolicy: IfNotPresent }
 
 # --- [ 2. 智能资源治理 (v3.3 New!) ] ---
 # 极客进化：VPA 自动学习并调整 Web/Worker 的内存和 CPU 配额
@@ -33,11 +33,11 @@ persistence:
 # --- [ 5. 极简负载配置 ] ---
 web:
   resources: { limits: { cpu: 500m, memory: 512Mi }, requests: { cpu: 100m, memory: 256Mi } }
-  hpa: { enabled: false, minpods: 1, maxpods: 10, cputhreshold: 75 }
+  hpa: { enabled: false, minpods: 1, maxpods: 10, cputhreshold: 75, memorythreshold: 75 }
 
 worker:
   resources: { limits: { cpu: 500m, memory: 512Mi }, requests: { cpu: 100m, memory: 256Mi } }
-  hpa: { enabled: false, minpods: 1, maxpods: 10, cputhreshold: 75 }
+  hpa: { enabled: false, minpods: 1, maxpods: 10, cputhreshold: 75, memorythreshold: 75 }
 
 # --- [ 5. 安全与流量治理 ] ---
 networkPolicy: { enabled: true, allowExternalEgress: true }
@@ -80,6 +80,7 @@ fullnameOverride: "chatwoot"
 serviceAccount: { create: true }
 hooks:
   migrate: { hookAnnotation: "post-install,post-upgrade" }
+existingEnvSecret: ""
 
 # --- [ 9. 智能迁移工具 ] ---
 migration:

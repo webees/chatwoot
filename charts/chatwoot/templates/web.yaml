@@ -65,6 +65,13 @@ spec:
             timeoutSeconds: 5
             successThreshold: 1
             failureThreshold: 10
+          startupProbe:
+            httpGet:
+              path: /health
+              port: {{ .Values.services.internalPort }}
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            failureThreshold: 30
       securityContext:
         runAsNonRoot: true
         runAsUser: 1000
