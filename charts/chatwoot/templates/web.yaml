@@ -2,7 +2,7 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "chatwoot.app.full" . }}-web
+  name: {{ include "chatwoot.full" . }}-web
   labels:
     {{- include "chatwoot.labels" . | nindent 4 }}
     role: web
@@ -72,10 +72,6 @@ spec:
             initialDelaySeconds: 30
             periodSeconds: 10
             failureThreshold: 30
-      securityContext:
-        runAsNonRoot: true
-        runAsUser: 1000
-      terminationGracePeriodSeconds: 60
 ---
 {{/* --- [ Web 内网访问服务 ] --- */}}
 apiVersion: v1
