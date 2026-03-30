@@ -58,7 +58,7 @@ spec:
             failureThreshold: 3
           readinessProbe:
             httpGet:
-              path: /api
+              path: /health
               port: {{ .Values.services.internalPort }}
             initialDelaySeconds: 15
             periodSeconds: 10
