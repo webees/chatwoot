@@ -10,6 +10,7 @@ tests:
   - it: should use pg16 for multi-arch (ARM) support
     set:
       postgresql:
+        enabled: true
         image:
           tag: pg16
     template: job.migrate.yaml
