@@ -180,4 +180,8 @@ volumes:
 {{- define "chatwoot.envFrom.common" -}}
 - secretRef:
     name: {{ printf "%s-env" (include "chatwoot.full" .) | quote }}
+{{- if .Values.existingEnvSecret }}
+- secretRef:
+    name: {{ .Values.existingEnvSecret }}
+{{- end }}
 {{- end -}}
