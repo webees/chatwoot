@@ -11,6 +11,7 @@ tests:
     set:
       postgresql:
         enabled: true
+        postgresqlHost: ""
         image:
           tag: pg16
     template: job.migrate.yaml
