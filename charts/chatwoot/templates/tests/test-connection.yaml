@@ -23,5 +23,5 @@ spec:
       image: busybox
       imagePullPolicy: IfNotPresent
       command: ['wget']
-      args: ['{{ include "chatwoot.fullname" . }}:{{ .Values.services.targetPort }}']
+      args: ['--spider', '-q', 'http://{{ include "chatwoot.fullname" . }}:{{ .Values.services.targetPort }}/']
   restartPolicy: Never
