@@ -6,7 +6,10 @@ global:
   mode: production # production | lite
 
 # --- [ 1. 核心镜像 ] ---
-image: { repository: chatwoot/chatwoot, tag: v4.12.1, pullPolicy: IfNotPresent }
+image: 
+  repository: chatwoot/chatwoot
+  tag: v4.13.0
+  pullPolicy: IfNotPresent
 
 # --- [ 2. 智能资源治理 (v3.3 New!) ] ---
 # 极客进化：VPA 自动学习并调整 Web/Worker 的内存和 CPU 配额
@@ -32,10 +35,27 @@ persistence:
 
 # --- [ 5. 极简负载配置 ] ---
 web:
+  replicaCount: 1
   resources: { limits: { cpu: 500m, memory: 1Gi }, requests: { cpu: 100m, memory: 512Mi } }
   hpa: { enabled: false, minpods: 1, maxpods: 10, cputhreshold: 75, memorythreshold: 75 }
+  livenessProbe:
+    initialDelaySeconds: 15
+    periodSeconds: 15
+    timeoutSeconds: 5
+    failureThreshold: 3
+  readinessProbe:
+    initialDelaySeconds: 15
+    periodSeconds: 5
+    timeoutSeconds: 5
+    failureThreshold: 3
+  startupProbe:
+    initialDelaySeconds: 30
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 60
 
 worker:
+  replicaCount: 2
   resources: { limits: { cpu: 500m, memory: 1Gi }, requests: { cpu: 100m, memory: 512Mi } }
   hpa: { enabled: false, minpods: 1, maxpods: 10, cputhreshold: 75, memorythreshold: 75 }
 
@@ -43,25 +63,8 @@ worker:
 networkPolicy: { enabled: true, allowExternalEgress: true }
 podDisruptionBudget: { enabled: false }
 
-# --- [ 6. 基础设施 ] ---
-# 外部 CNPG PostgreSQL (通过 PgBouncer 连接池)
-postgresql:
-  enabled: false
-  postgresqlHost: "pg-pooler-rw.cnpg.svc.cluster.local"
-  postgresqlPort: "5432"
-  auth:
-    username: chatwoot
-    database: chatwoot
-
-# 外部 Valkey HA (Sentinel 3 节点)
-redis:
-  enabled: false
-  host: "valkey-rw.valkey.svc.cluster.local"
-  port: "6379"
-  auth:
-    existingSecret: ""
-  master:
-    persistence: { medium: Memory }
+# --- [ 6. 基础设施 (已脱钩外部手动配置) ] ---
+# (Redis/PostgreSQL 被彻底剥离，依赖 env 传入)
 
 # --- [ 7. 网络接入 ] ---
 service: { type: ClusterIP, port: 3000 }
@@ -86,6 +89,7 @@ existingEnvSecret: ""
 migration:
   enabled: true # 开启后将自动接管 Release 名称对应的旧磁盘和 Secret
   legacyInstanceName: "" # 如不填，则自动使用 .Release.Name
+
 env:
   # --- 核心 ---
   RAILS_ENV: production
