@@ -1,18 +1,15 @@
 apiVersion: v2
 name: chatwoot
-version: 3.3.39
+version: 3.3.40
 appVersion: "v4.13.0"
-description: "Chatwoot 极客架构版：原子化重构、硬核节点锁定、多实例共存优化 (v3.3.39) ⚛️"
+description: "Chatwoot 极客架构版：基于 3.3.38 稳定架构的安全升级版 (v3.3.40) ⚛️"
 type: application
 keywords: [chatwoot, minimalism, geek, atomic, hardened]
 home: https://github.com/webees/chatwoot
 icon: https://chatwoot-public-assets.s3.amazonaws.com/logo/square.png
-sources: 
-  - 'https://github.com/chatwoot/chatwoot'
-  - 'https://github.com/chatwoot/charts'
+sources: ['https://github.com/chatwoot/chatwoot', 'https://github.com/chatwoot/charts']
 dependencies:
-  - name: common
-    version: 2.31.4
-    repository: "oci://registry-1.docker.io/bitnamicharts"
-maintainers: 
-  - name: webees
+  - {name: postgresql, version: 11.6.7, repository: "https://charts.bitnami.com/bitnami", condition: "postgresql.enabled"}
+  - {name: redis, version: 16.12.2, repository: "https://charts.bitnami.com/bitnami", condition: "redis.enabled"}
+  - {name: common, version: 2.31.4, repository: "oci://registry-1.docker.io/bitnamicharts"}
+maintainers: [{name: webees}]

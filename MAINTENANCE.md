@@ -6,6 +6,8 @@
 
 ## 🏗 架构特性
 
+本 Chart 以 `chatwoot-3.3.38` 为 Rancher 兼容基线。后续升级只允许在该基线上选择性吸收上游修复，不能直接套用上游 `chatwoot/charts` 的模板拆分或资源重命名。
+
 ### 1. 节点调度（硬约束）
 - **强制调度**：所有 Pod（Web、Worker、Migrate）必须运行在带有 `worker` 和 `longhorn` 标签的节点上
 - **实现方式**：`requiredDuringSchedulingIgnoredDuringExecution` + `operator: Exists`
@@ -47,6 +49,24 @@
 
 ---
 
+## 🔒 升级兼容性红线
+
+以下字段影响 Kubernetes 不可变字段或 Rancher 升级引用，除非明确执行迁移方案，否则禁止修改：
+
+| 资源 | 必须保持稳定的字段 |
+|------|--------------------|
+| Web Deployment | `metadata.name: chatwoot-web`、`spec.selector.matchLabels`、`role: web` |
+| Worker Deployment | `metadata.name: chatwoot-worker`、`spec.selector.matchLabels`、`role: worker` |
+| Service | `metadata.name: chatwoot`、selector 指向 `role: web` |
+| Secret | `metadata.name: chatwoot-env` |
+| PVC | `metadata.name: chatwoot-storage` |
+| Hook Job | `metadata.name: chatwoot-migrate`、hook annotation 策略 |
+| 基础命名 | `fullnameOverride: "chatwoot"` |
+
+如果必须变更这些字段，先新建迁移版本并写清楚手动迁移步骤；不要在普通版本升级里直接修改。
+
+---
+
 ## 🔄 上游同步策略
 
 ### 配置上游源（仅需一次）
@@ -58,6 +78,7 @@ git remote add upstream https://github.com/chatwoot/charts.git
 ```bash
 git fetch upstream
 git diff main upstream/main  # 先对比差异
+git log --oneline main..upstream/main
 ```
 
 > ⚠️ **切勿**直接 `git merge upstream/main`。手动对比后选择性采纳，保护以下本地逻辑：
@@ -66,9 +87,54 @@ git diff main upstream/main  # 先对比差异
 > - `templates/_helpers.tpl`：`chatwoot.pod.common` 中的 affinity 注入
 > - `templates/web.yaml`：startupProbe、securityContext、RollingUpdate 策略
 
+### 当前上游同步状态
+
+- 已对比 `chatwoot/charts` 上游 `main`：`dbc95a4f0 feat: upgrade charts to chatwoot v4.13.0 (#204)`
+- 选择性采纳：Chatwoot `v4.13.0` 镜像、可配置 Web 探针、`/api` readiness、迁移 Job 使用 Chatwoot 镜像与 `getent hosts` 检查 Redis
+- 明确不采纳：上游模板重命名、拆分 HPA/ServiceAccount/Secret、移除本地 helm-unittest 套件等会影响 Rancher 升级兼容性的结构性改动
+
+### 允许选择性采纳的上游变更
+
+- Chatwoot 应用镜像版本升级
+- 探针默认值或探针可配置能力
+- 初始化容器的兼容性修复
+- Secret/env 注入 bugfix
+- Kubernetes API 版本兼容修复
+- 不改变资源名称、selector、PVC、Service、Secret、Hook 名称的模板修复
+
+### 默认拒绝的上游变更
+
+- 模板文件重命名导致 Rancher diff 难以审计
+- Deployment selector、label 体系重构
+- Service/Secret/ServiceAccount/HPA/PDB 拆分或重命名
+- 删除本地 helm-unittest 套件
+- 默认启用内置 PostgreSQL/Redis
+- 改变 `fullnameOverride` 或 Release 命名策略
+
 ---
 
-## 🚀 部署操作
+## 🧪 本地验证流程
+
+每次提交前必须执行：
+
+```bash
+helm dependency build charts/chatwoot
+helm lint charts/chatwoot
+helm template chatwoot charts/chatwoot >/tmp/chatwoot-template.yaml
+helm unittest charts/chatwoot
+```
+
+升级兼容性变更还需要检查关键字段：
+
+```bash
+rg -n "name: chatwoot-web|name: chatwoot-worker|name: chatwoot-storage|name: chatwoot-env|path: /api|getent hosts" /tmp/chatwoot-template.yaml
+```
+
+当前测试基线：`11` 个 test suites，`43` 个用例。新增模板能力必须补充 helm-unittest，尤其是 selector、Service、Secret、PVC、probe、hook 和外部 Secret。
+
+---
+
+## 🚀 部署与升级操作
 
 ### CLI 部署（推荐）
 ```bash
@@ -80,6 +146,17 @@ helm upgrade chatwoot ./charts/chatwoot \
 ### Rancher UI 部署
 1. 勾选 **Wait** 和 **Atomic**（失败自动回滚）
 2. 超时时间设为 `600` 秒以上
+3. 保持 `fullnameOverride: "chatwoot"`，不要在升级时修改 Release 名、Service 名、PVC 名或 selector 相关配置
+4. 使用 Rancher Values 或 `values.override.yaml` 管理 `SECRET_KEY_BASE`、`POSTGRES_PASSWORD` 等敏感配置，避免提交到仓库
+5. 从 `3.3.38` 升级到 `3.3.40` 的预期变更仅限镜像版本、Web readiness 路径、探针参数渲染顺序和迁移 Job 的 Redis 检查方式；Deployment selector、Service、Secret、PVC 名称必须保持不变
+
+### 推荐升级路径
+
+1. 在 Rancher 中导出现有 Values，保存为升级前快照
+2. 确认外部 PostgreSQL、Valkey/Redis、PVC 和节点标签正常
+3. 使用新 Chart 执行升级，保持 Release 名和 `fullnameOverride` 不变
+4. 等待迁移 Job 完成，再观察 Web readiness
+5. 如升级失败，使用 Rancher/Helm rollback 回到上一 revision，不手工删除 PVC 或 Secret
 
 ### 部署前置条件
 ```bash
@@ -89,7 +166,7 @@ kubectl label node <node-name> worker=true longhorn=true
 
 ---
 
-## ✅ 升级后核查
+## ✅ 升级后核查与回滚
 
 ```bash
 # 1. 确认 Pod 运行在 worker 节点
@@ -107,7 +184,20 @@ kubectl get jobs -n chatwoot | grep migrate
 
 # 5. 确认 NetworkPolicy 已生效
 kubectl get networkpolicy -n chatwoot
+
+# 6. 确认升级关键资源名称未变化
+kubectl get deploy,svc,secret,pvc -n chatwoot | grep chatwoot
 ```
+
+如果需要回滚：
+
+```bash
+helm history chatwoot -n chatwoot
+helm rollback chatwoot <REVISION> -n chatwoot --wait --timeout 10m
+kubectl get pods -n chatwoot -o wide
+```
+
+回滚时不要删除 `chatwoot-storage` PVC、`chatwoot-env` Secret 或外部数据库/Redis Secret。若迁移 Job 已执行过数据库迁移，先确认 Chatwoot 版本是否支持回滚。
 
 ---
 
@@ -115,6 +205,7 @@ kubectl get networkpolicy -n chatwoot
 
 | 版本 | 关键变更 |
 |------|----------|
+| **v3.3.40** | 基于 3.3.38 稳定架构升级 Chatwoot v4.13.0；采纳上游可配置探针、`/api` readiness、`getent` Redis 检查；补充 Rancher 升级保护测试与兼容性 schema；保留稳定 selector、统一 Pod 规范与 `policy.yaml` |
 | **v3.3.30** | 升级 v4.12.1：采纳上游 startupProbe、memory HPA、existingEnvSecret |
 | **v3.3.28** | 原子化命名重构：PG/Redis 独立 `fullnameOverride`，`existingSecret` 解耦 Release 名，Ingress 启用，Service 切换为 ClusterIP |
 | **v3.3.25** | 硬约束锁定：全组件强制 `nodeSelector: { worker: "true" }` |

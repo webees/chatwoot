@@ -18,6 +18,38 @@ tests:
           path: metadata.name
           value: chatwoot-web
 
+  - it: should preserve immutable selector labels for safe Rancher upgrades
+    set:
+      fullnameOverride: "chatwoot"
+    template: web.yaml
+    documentIndex: 0
+    asserts:
+      - equal:
+          path: spec.selector.matchLabels
+          value:
+            app.kubernetes.io/name: chatwoot
+            app.kubernetes.io/instance: chatwoot-release
+            role: web
+      - equal:
+          path: spec.strategy.rollingUpdate.maxUnavailable
+          value: 0
+
+  - it: should preserve worker immutable selector labels for safe Rancher upgrades
+    set:
+      fullnameOverride: "chatwoot"
+    template: worker.yaml
+    documentIndex: 0
+    asserts:
+      - equal:
+          path: spec.selector.matchLabels
+          value:
+            app.kubernetes.io/name: chatwoot
+            app.kubernetes.io/instance: chatwoot-release
+            role: worker
+      - equal:
+          path: spec.strategy.rollingUpdate.maxUnavailable
+          value: 0
+
   - it: should scale via profile
     set:
       global: { mode: production }
@@ -27,6 +59,22 @@ tests:
       - equal:
           path: spec.replicas
           value: 2
+
+  - it: should deploy the Chatwoot v4.13.0 image on web
+    template: web.yaml
+    documentIndex: 0
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].image
+          value: chatwoot/chatwoot:v4.13.0
+
+  - it: should deploy the Chatwoot v4.13.0 image on worker
+    template: worker.yaml
+    documentIndex: 0
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].image
+          value: chatwoot/chatwoot:v4.13.0
 
   - it: should have worker replicas in production
     set:
