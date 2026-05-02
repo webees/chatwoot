@@ -1,73 +1,48 @@
+{{/* --- [ Worker 任务单元: Deployment ] --- */}}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ template "chatwoot.fullname" . }}-worker
-  creationTimestamp: null
+  name: {{ include "chatwoot.full" . }}-worker
   labels:
-    app: {{ template "chatwoot.fullname" . }}
-    chart: "{{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}"
-    release: "{{ .Release.Name }}"
-    heritage: "{{ .Release.Service }}"
+    {{- include "chatwoot.labels" . | nindent 4 }}
+    role: worker
 spec:
-  replicas: {{ int .Values.worker.replicaCount }}
+  replicas: {{ include "chatwoot.app.replicas" (dict "context" . "component" "worker") }}
   selector:
     matchLabels:
-      {{- include "chatwoot.selectorLabels" . | nindent 6 }}
+      {{- include "chatwoot.selector" . | nindent 6 }}
       role: worker
-  strategy: {}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
   template:
     metadata:
-      creationTimestamp: null
       labels:
-        {{- include "chatwoot.selectorLabels" . | nindent 8 }}
+        {{- include "chatwoot.selector" . | nindent 8 }}
         role: worker
       annotations:
-        checksum/config: {{ include (print $.Template.BasePath "/env-secret.yaml") . | sha256sum }}
-        {{- with .Values.podAnnotations }}
-        {{- toYaml . | nindent 8 }}
-        {{- end }}
+        checksum/config: {{ include (print $.Template.BasePath "/base.yaml") . | sha256sum }}
     spec:
-      {{- with .Values.imagePullSecrets }}
-      imagePullSecrets:
-        {{- toYaml . | nindent 6 }}
-      {{- end }}
-      {{- with .Values.tolerations }}
-      tolerations:
-        {{- toYaml . | nindent 8 }}
-      {{- end }}
-      {{- if .Values.nodeSelector }}
-      nodeSelector: {{- include "common.tplvalues.render" (dict "value" .Values.nodeSelector "context" $) | nindent 8 }}
-      {{- end }}
+      {{- include "chatwoot.pod.common" . | nindent 6 }}
       containers:
-        - args:
-            - bundle
-            - exec
-            - sidekiq
-            - -C
-            - config/sidekiq.yml
-
-          envFrom:
-            - secretRef:
-                name: {{ template "chatwoot.fullname" . }}-env
-          {{- if .Values.existingEnvSecret }}
-            - secretRef:
-                name: {{ .Values.existingEnvSecret }}
-          {{- end }}
+        - name: worker
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
-          name: {{ .Chart.Name }}-workers
-          {{- with .Values.worker.resources }}
-          resources:
-            {{- toYaml . | nindent 12 }}
-            {{- end }}
           imagePullPolicy: {{ .Values.image.pullPolicy }}
+          args: [bundle, exec, sidekiq, -C, config/sidekiq.yml]
+          env:
+            {{- include "chatwoot.env.common" . | nindent 12 }}
+          envFrom:
+            {{- include "chatwoot.envFrom.common" . | nindent 12 }}
           volumeMounts:
             - name: cache
               mountPath: /app/tmp
-      serviceAccountName: {{ include "chatwoot.serviceAccountName" . }}
-      {{- if .Values.securityContext }}
-      securityContext: {{ .Values.securityContext | toYaml | nindent 8 }}
-      {{- end }}
-      volumes:
-        - name: cache
-          emptyDir: {}
-
+            {{- if .Values.persistence.enabled }}
+            - name: storage
+              mountPath: /app/storage
+            {{- end }}
+          {{- if .Values.worker.resources }}
+          resources:
+            {{- toYaml .Values.worker.resources | nindent 12 }}
+          {{- end }}

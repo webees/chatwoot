@@ -1,36 +1,17 @@
-{{- if .Values.ingress.enabled -}}
-{{- $fullName := include "chatwoot.fullname" . -}}
-{{- $svcPort := .Values.service.port -}}
-{{- if semverCompare ">=1.14-0" .Capabilities.KubeVersion.GitVersion -}}
+{{/* --- [ 流量入口: Ingress 控制器 ] --- */}}
+{{- if .Values.ingress.enabled }}
 apiVersion: networking.k8s.io/v1
-{{- else -}}
-apiVersion: extensions/v1beta1
-{{- end }}
 kind: Ingress
 metadata:
-  name: {{ $fullName }}
-  labels:
-    app: {{ template "chatwoot.fullname" . }}
-    chart: "{{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}"
-    release: "{{ .Release.Name }}"
-    heritage: "{{ .Release.Service }}"
+  name: {{ default (include "chatwoot.full" .) .Values.ingress.nameOverride }}
+  labels: {{ include "chatwoot.labels" . | nindent 4 }}
   {{- with .Values.ingress.annotations }}
-  annotations:
-    {{- toYaml . | nindent 4 }}
+  annotations: {{ toYaml . | nindent 4 }}
   {{- end }}
 spec:
-  {{- if and .Values.ingress.ingressClassName (semverCompare ">=1.18-0" .Capabilities.KubeVersion.GitVersion) }}
-  ingressClassName: {{ .Values.ingress.ingressClassName }}
-  {{- end }}
+  ingressClassName: {{ default "traefik" .Values.ingress.className }}
   {{- if .Values.ingress.tls }}
-  tls:
-    {{- range .Values.ingress.tls }}
-    - hosts:
-        {{- range .hosts }}
-        - {{ . | quote }}
-        {{- end }}
-      secretName: {{ .secretName }}
-    {{- end }}
+  tls: {{ toYaml .Values.ingress.tls | nindent 4 }}
   {{- end }}
   rules:
     {{- range .Values.ingress.hosts }}
@@ -40,11 +21,7 @@ spec:
           {{- range .paths }}
           - path: {{ .path }}
             pathType: {{ .pathType }}
-            backend:
-              service:
-                name: {{ if .backend }}{{ .backend.service.name }}{{ else }}{{ $fullName }}{{ end }}
-                port:
-                  number: {{ if .backend }}{{ int .backend.service.port.number }}{{ else }}{{ int $svcPort }}{{ end }}
+            backend: {service: {name: {{ include "chatwoot.full" $ }}, port: {number: {{ $.Values.service.port }} }}}
           {{- end }}
     {{- end }}
-  {{- end }}
+{{- end }}

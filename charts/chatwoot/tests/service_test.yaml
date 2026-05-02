@@ -19,6 +19,22 @@ tests:
           path: spec.ports[0].port
           value: 8080
 
+  - it: should preserve service name and selector for Rancher upgrades
+    set:
+      fullnameOverride: "chatwoot"
+    template: web.yaml
+    documentIndex: 1
+    asserts:
+      - equal:
+          path: metadata.name
+          value: chatwoot
+      - equal:
+          path: spec.selector
+          value:
+            app.kubernetes.io/name: chatwoot
+            app.kubernetes.io/instance: RELEASE-NAME
+            role: web
+
   - it: should handle multiple ingress hosts correctly
     set:
       ingress:

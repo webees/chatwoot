@@ -2,16 +2,89 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "type": "object",
   "properties": {
+    "global": {
+      "type": "object",
+      "properties": {
+        "mode": { "type": "string", "enum": ["production", "lite"] }
+      }
+    },
+    "image": {
+      "type": "object",
+      "properties": {
+        "repository": { "type": "string", "minLength": 1 },
+        "tag": { "type": "string", "minLength": 1 },
+        "pullPolicy": { "type": "string", "enum": ["Always", "IfNotPresent", "Never"] }
+      }
+    },
     "web": {
       "type": "object",
       "properties": {
-        "replicaCount": { "type": "integer", "minimum": 1 }
+        "replicaCount": { "type": "integer", "minimum": 1 },
+        "livenessProbe": { "$ref": "#/definitions/probeSettings" },
+        "readinessProbe": { "$ref": "#/definitions/probeSettings" },
+        "startupProbe": { "$ref": "#/definitions/probeSettings" },
+        "hpa": {
+          "type": "object",
+          "properties": {
+            "enabled": { "type": "boolean" },
+            "minpods": { "type": "integer", "minimum": 1 },
+            "maxpods": { "type": "integer", "minimum": 1 },
+            "cputhreshold": { "type": "integer", "minimum": 1, "maximum": 100 },
+            "memorythreshold": { "type": "integer", "minimum": 1, "maximum": 100 }
+          }
+        }
       }
     },
     "worker": {
       "type": "object",
       "properties": {
-        "replicaCount": { "type": "integer", "minimum": 1 }
+        "replicaCount": { "type": "integer", "minimum": 1 },
+        "hpa": {
+          "type": "object",
+          "properties": {
+            "enabled": { "type": "boolean" },
+            "minpods": { "type": "integer", "minimum": 1 },
+            "maxpods": { "type": "integer", "minimum": 1 },
+            "cputhreshold": { "type": "integer", "minimum": 1, "maximum": 100 },
+            "memorythreshold": { "type": "integer", "minimum": 1, "maximum": 100 }
+          }
+        }
+      }
+    },
+    "storage": {
+      "type": "object",
+      "properties": {
+        "type": { "type": "string", "enum": ["local", "s3", "gcs"] },
+        "s3": {
+          "type": "object",
+          "properties": {
+            "bucket": { "type": "string" },
+            "region": { "type": "string" },
+            "accessKeyId": { "type": "string" },
+            "secretAccessKey": { "type": "string" }
+          }
+        },
+        "gcs": {
+          "type": "object",
+          "properties": {
+            "bucket": { "type": "string" },
+            "project": { "type": "string" }
+          }
+        }
+      }
+    },
+    "persistence": {
+      "type": "object",
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "size": { "type": "string", "pattern": "^[0-9]+[GMi]+$" },
+        "accessModes": {
+          "type": "array",
+          "items": { "type": "string" },
+          "minItems": 1
+        },
+        "storageClass": { "type": "string" },
+        "annotations": { "type": "object" }
       }
     },
     "postgresql": {
@@ -34,8 +107,64 @@
     "redis": {
       "type": "object",
       "properties": {
-        "architecture": { "type": "string", "enum": ["standalone", "replication"] }
+        "architecture": { "type": "string", "enum": ["standalone", "replication"] },
+        "enabled": { "type": "boolean" },
+        "host": { "type": "string" },
+        "port": { "type": ["string", "integer"] }
       }
+    },
+    "networkPolicy": {
+      "type": "object",
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "allowExternalEgress": { "type": "boolean" }
+      }
+    },
+    "podDisruptionBudget": {
+      "type": "object",
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "minAvailable": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "vpa": {
+      "type": "object",
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "updateMode": { "type": "string", "enum": ["Auto", "Off", "Recreate"] }
+      }
+    },
+    "service": {
+      "type": "object",
+      "properties": {
+        "type": { "type": "string" },
+        "port": { "type": "integer", "minimum": 1, "maximum": 65535 }
+      }
+    },
+    "services": {
+      "type": "object",
+      "properties": {
+        "internalPort": { "type": "integer", "minimum": 1, "maximum": 65535 },
+        "targetPort": { "type": "integer", "minimum": 1, "maximum": 65535 }
+      }
+    },
+    "existingEnvSecret": { "type": "string" },
+    "fullnameOverride": { "type": "string" },
+    "env": { "type": "object" }
+  },
+  "definitions": {
+    "probeSettings": {
+      "type": "object",
+      "properties": {
+        "initialDelaySeconds": { "type": "integer", "minimum": 0 },
+        "periodSeconds": { "type": "integer", "minimum": 1 },
+        "timeoutSeconds": { "type": "integer", "minimum": 1 },
+        "successThreshold": { "type": "integer", "minimum": 1 },
+        "failureThreshold": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "note": {
+      "description": "This schema intentionally allows additional properties for Rancher and existing override compatibility."
     }
   }
 }

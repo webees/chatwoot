@@ -2,6 +2,7 @@ suite: test smart storage engine
 templates:
   - web.yaml
   - base.yaml # Required for checksum calculation in web.yaml
+  - persistence.yaml
 tests:
   - it: should generate S3 environment variables correctly
     set:
@@ -51,3 +52,13 @@ tests:
       - contains:
           path: spec.template.spec.containers[0].env
           content: { name: ACTIVE_STORAGE_SERVICE, value: "local" }
+
+  - it: should preserve PVC name for Rancher upgrades
+    set:
+      persistence:
+        enabled: true
+    template: persistence.yaml
+    asserts:
+      - equal:
+          path: metadata.name
+          value: chatwoot-storage
