@@ -1,380 +1,112 @@
- # Chatwoot
+# Chatwoot Helm Chart
 
-[Chatwoot](https://chatwoot.com) is a customer engagement suite. an open-source alternative to Intercom, Zendesk, Salesforce Service Cloud, etc. 🔥💬
+[Chatwoot](https://chatwoot.com) 是一个开源的客户参与套件，作为 Intercom, Zendesk, Salesforce Service Cloud 等的开源替代方案。 🔥💬
 
-## TL;DR
+> **注意：此版本为深度定制版 (Chart v3.3.39, App v4.13.0)**
+> 已剥离内部绑定的 PostgreSQL 和 Redis，要求必须外部注入。修正了由于 K8s 不可变字段引发的升级错误。
 
-```
-helm repo add chatwoot https://chatwoot.github.io/charts
-helm install chatwoot chatwoot/chatwoot
-```
-
-## Prerequisites
+## 环境要求
 
 - Kubernetes 1.16+
 - Helm 3.1.0+
-- PV provisioner support in the underlying infrastructure
+- 底层基础设施支持 PV 卷配置
 
+## 安装图表
 
-## Installing the chart
-
-To install the chart with the release name `chatwoot`:
+安装名为 `chatwoot` 的 Release：
 
 ```console
 $ helm install chatwoot chatwoot/chatwoot
 ```
 
-The command deploys Chatwoot on the Kubernetes cluster in the default configuration. The [parameters](#parameters) section lists the parameters that can be configured during installation.
+默认配置会在 Kubernetes 集群上部署 Chatwoot。请参考下方的[参数说明](#参数说明)以根据您的环境进行配置。
 
-> **Tip**: List all releases using `helm list`
+> **提示**: 使用 `helm list` 列出所有的 Release。
 
-## Uninstalling the chart
+## 卸载图表
 
-To uninstall/delete the `chatwoot` deployment:
+删除/卸载 `chatwoot` 部署：
 
 ```console
 helm delete chatwoot
 ```
 
-The command removes all the Kubernetes components associated with the chart and deletes the release.
+该命令会移除图表相关的所有 Kubernetes 组件，并删除对应的 Release。
 
-> **Note**: Persistent volumes are not deleted automatically. They need to be removed manually.
+> **注意**: 持久化卷（Persistent Volumes）不会被自动删除。它们需要您手动进行清理。
 
+## 参数说明
 
-## Parameters
+### 核心镜像参数
 
-
-### Chatwoot Image parameters
-
-| Name                | Description                                          | Value                 |
+| 参数名              | 描述                                                 | 默认值                |
 | ------------------- | ---------------------------------------------------- | --------------------- |
-| `image.repository`  | Chatwoot image repository                            | `chatwoot/chatwoot`    |
-| `image.tag`         | Chatwoot image tag (immutable tags are recommended)  | `v4.13.0`             |
-| `image.pullPolicy`  | Chatwoot image pull policy                           | `IfNotPresent`         |
+| `image.repository`  | Chatwoot 镜像仓库                                    | `chatwoot/chatwoot`    |
+| `image.tag`         | Chatwoot 镜像标签 (建议使用不可变标签)                 | `v4.13.0`             |
+| `image.pullPolicy`  | 镜像拉取策略                                         | `IfNotPresent`         |
 
+### Chatwoot 核心环境变量 (通过 `env` 对象传入)
 
-### Chatwoot Environment Variables
+| 参数名                                 | 类型   | 默认值                                                     |
+| ------------------------------------ | ------ | ---------------------------------------------------------- |
+| `env.ACTIVE_STORAGE_SERVICE`         | 字符串 | `"local"` (云端使用 `amazon`，本地使用 `local`)            |
+| `env.ASSET_CDN_HOST`                 | 字符串 | `""` (如果使用了 CDN 交付静态资源，请设置)                 |
+| `env.INSTALLATION_ENV`               | 字符串 | `"helm"`                                                   |
+| `env.ENABLE_ACCOUNT_SIGNUP`          | 字符串 | `"false"` (是否允许前台自主注册账号)                       |
+| `env.FORCE_SSL`                      | 字符串 | `"false"` (是否强制 HTTPS 跳转)                            |
+| `env.FRONTEND_URL`                   | 字符串 | `"https://chat.example.com"`                               |
+| `env.RAILS_ENV`                      | 字符串 | `"production"`                                             |
+| `env.RAILS_MAX_THREADS`              | 字符串 | `"5"`                                                      |
+| `env.SECRET_KEY_BASE`                | 字符串 | **极度机密，用于签名 Cookie，请务必在 Values 中强行注入**  |
 
-| Name                                 | Type                                                                | Default Value                                              |
-| ------------------------------------ | ------------------------------------------------------------------- | ---------------------------------------------------------- |
-| `env.ACTIVE_STORAGE_SERVICE`         | Storage service. `local` for disk. `amazon` for s3.                 | `"local"`                                                  |
-| `env.ASSET_CDN_HOST`                 | Set if CDN is used for asset delivery.                              | `""`                                                       |
-| `env.INSTALLATION_ENV`               | Sets chatwoot installation method.                                  | `"helm"`                                                   |
-| `env.ENABLE_ACCOUNT_SIGNUP`          | `true` : default option, allows sign ups, `false` : disables all the end points related to sign ups, `api_only`: disables the UI for signup but you can create sign ups via the account apis.  | `"false"`                                                  |
-| `env.FORCE_SSL`                      | Force all access to the app over SSL, default is set to false.                  | `"false"`                                                  |
-| `env.FRONTEND_URL`                   | Replace with the URL you are planning to use for your app.                      | `"http://0.0.0.0:3000/"`                                   |
-| `env.IOS_APP_ID`                     | Change this variable only if you are using a custom build for mobile app.       | `"6C953F3RX2.com.chatwoot.app"`                            |
-| `env.ANDROID_BUNDLE_ID`              | Change this variable only if you are using a custom build for mobile app.       | `"com.chatwoot.app"`                                       |
-| `env.ANDROID_SHA256_CERT_FINGERPRINT`| Change this variable only if you are using a custom build for mobile app.       | `"AC:73:8E:DE:EB:5............"`                           |
-| `env.MAILER_SENDER_EMAIL`            | The email from which all outgoing emails are sent.                              | `""`                                                       |
-| `env.RAILS_ENV`                      | Sets rails environment.                                                         | `"production"`                                             |
-| `env.RAILS_MAX_THREADS`              | Number of threads each worker will use.                                         | `"5"`                                                      |
-| `env.SECRET_KEY_BASE`                | Used to verify the integrity of signed cookies. Ensure a secure value is set.   | `replace_with_your_super_duper_secret_key_base`            |
-| `env.SENTRY_DSN`                     | Sentry data source name.                                                        | `""`                                                       |
-| `env.SMTP_ADDRESS`                   | Set your smtp address.                                                          |`""`                                                        |
-| `env.SMTP_AUTHENTICATION`            | Allowed values: `plain`,`login`,`cram_md5`                                      | `"plain"`                                                  |
-| `env.SMTP_ENABLE_STARTTLS_AUTO`      | Defaults to true.                                                               | `"true"`                                                   |
-| `env.SMTP_OPENSSL_VERIFY_MODE`       | Can be: `none`, `peer`, `client_once`, `fail_if_no_peer_cert`                   | `"none"`                                                   |
-| `env.SMTP_PASSWORD`                  | SMTP password                                                                   | `""`                                                       |
-| `env.SMTP_PORT`                      | SMTP port                                                                       | `"587"`                                                    |
-| `env.SMTP_USERNAME`                  | SMTP username                                                                   | `""`                                                       |
-| `env.USE_INBOX_AVATAR_FOR_BOT`       | Bot customizations                                                              | `"true"`                                                   |
+> 更多的电子邮件配置、第三方集成凭据等（如 AWS, Slack, Twitter 等），均通过 `env` 对象以键值对的形式在 `values.yaml` 中传递。
 
-### Email setup for conversation continuity (Incoming emails)
+### 数据库配置 (强制使用外部集群)
 
-| Name                                | Type                                                                                                                                                    | Default Value |
-| ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------- |
-| `env.MAILER_INBOUND_EMAIL_DOMAIN`   | This is the domain set for the reply emails when conversation continuity is enabled.                                                                    | `""`          |
-| `env.RAILS_INBOUND_EMAIL_SERVICE`   | Set this to appropriate ingress channel with regards to incoming emails. Possible values are `relay`, `mailgun`, `mandrill`, `postmark` and `sendgrid`. | `""`          |
-| `env.RAILS_INBOUND_EMAIL_PASSWORD`  | Password for the email service.                                                                                                                         | `""`          |
-| `env.MAILGUN_INGRESS_SIGNING_KEY`   | Set if using mailgun for incoming conversations.                                                                                                        | `""`          |
-| `env.MANDRILL_INGRESS_API_KEY`      | Set if using mandrill for incoming conversations.                                                                                                       | `""`          |
+本定制分支**不支持**在 Helm 内部安装 PostgreSQL 和 Redis（极度不推荐这种无状态与有状态混合部署的反模式）。
+所有的数据库连接凭据，**必须直接通过环境变量传递**：
 
-### Postgres variables
+```yaml
+env:
+  # PostgreSQL 连接池配置
+  POSTGRES_HOST: "pg-pooler-rw.cnpg.svc.cluster.local"
+  POSTGRES_PORT: "5432"
+  POSTGRES_DATABASE: "chatwoot"
+  POSTGRES_USERNAME: "chatwoot"
+  POSTGRES_PASSWORD: "YOUR_PG_PASSWORD"
 
-| Name                                | Type                                                                          | Default Value                                    |
-| ----------------------------------- | ----------------------------------------------------------------------------- | ------------------------------------------------ |
-| `postgresql.enabled`                | Set to `false` if using external postgres and modify the below variables.     | `true`                                           |
-| `postgresql.auth.database`| Chatwoot database name                                                        | `chatwoot_production`                            |
-| `postgresql.postgresqlHost`         | Postgres host. Edit if using external postgres.                               | `""`                                             |
-| `postgresql.auth.postgresPassword`| Postgres password. Edit if using external postgres.                           | `postgres`                                       |
-| `postgresql.postgresqlPort`         | Postgres port                                                                 | `5432`                                           |
-| `postgresql.auth.username`| Postgres username.                                                            | `postgres`                                       |
+  # Valkey/Redis 缓存及后台任务队列
+  REDIS_URL: "redis://:YOUR_REDIS_PASSWORD@valkey-rw.valkey.svc.cluster.local:6379/0"
+```
 
-### Redis variables
+### 自动扩缩容 (HPA)
 
-| Name                                | Description                                                                | Default Value                                       |
-| ----------------------------------- | -------------------------------------------------------------------------  | --------------------------------------------------- |
-| `redis.enabled`                     | Set to `false` if using external redis and modify the below variables.     | `true`                                              |
-| `redis.auth.password`               | Password used for internal redis cluster                                   | `redis`                                             |
-| `env.REDIS_TLS`                     | Set to `true` if TLS(`rediss://`) is required                              | `false`                                             |
+为 `web` 和 `worker` 提供 HPA 支持。建议仅在存在剧烈并发流量的环境下启用，并配合集群的 Metrics Server 使用：
 
-#### External Redis (when `redis.enabled=false`)
+| 参数名                              | 类型   | 默认值 |
+| ----------------------------------- | ------ | ------ |
+| `web.hpa.enabled`                   | 布尔   | `false`|
+| `web.hpa.cputhreshold`              | 整数   | `75`   |
+| `web.hpa.memorythreshold`           | 整数   | `75`   |
+| `worker.hpa.enabled`                | 布尔   | `false`|
 
-| Name                                | Description                                                                | Default Value                                       |
-| ----------------------------------- | -------------------------------------------------------------------------  | --------------------------------------------------- |
-| `redis.host`                        | Redis host name                                                            | `""`                                                |
-| `redis.port`                        | Redis port                                                                 | `""`                                                |
-| `redis.password`                    | Redis password                                                             | `""`                                                |
-| `env.REDIS_SENTINELS`               | Comma-separated list of sentinel host:port pairs (e.g. `sentinel-0:26379,sentinel-1:26379`) | `""`                                  |
-| `env.REDIS_SENTINEL_MASTER_NAME`    | Sentinel master name                                                       | `""`                                                |
+### 其他配置概览
 
-#### Redis Sentinel (when using the built-in Redis)
-
-Enable Sentinel for high availability with automatic failover. `REDIS_SENTINELS` and `REDIS_SENTINEL_MASTER_NAME` env vars are auto-configured.
-
-| Name                                | Description                                                                | Default Value                                       |
-| ----------------------------------- | -------------------------------------------------------------------------  | --------------------------------------------------- |
-| `redis.sentinel.enabled`            | Enable Redis Sentinel                                                      | `false`                                             |
-| `redis.sentinel.masterSet`          | Sentinel master set name                                                   | `mymaster`                                          |
-| `redis.replica.replicaCount`        | Number of Redis replicas                                                   | `3`                                                 |
-
-
-### Logging variables
-
-| Name                                | Type                                                                | Default Value                                              |
-| ----------------------------------- | ------------------------------------------------------------------- | ---------------------------------------------------------- |
-| `env.RAILS_LOG_TO_STDOUT`           | string                                                              | `"true"`                                                   |
-| `env.LOG_LEVEL`                     | string                                                              | `"info"`                                                   |
-| `env.LOG_SIZE`                      | string                                                              | `"500"`                                                    |
-
-### Third party credentials
-
-| Name                                | Type                                                                 | Default Value                                              |
-| ----------------------------------- | -------------------------------------------------------------------- | ---------------------------------------------------------- |
-| `env.S3_BUCKET_NAME`                | S3 bucket name                                                       | `""`                                                       |
-| `env.AWS_ACCESS_KEY_ID`             | Amazon access key ID                                                 | `""`                                                       |
-| `env.AWS_REGION`                    | Amazon region                                                        | `""`                                                       |
-| `env.AWS_SECRET_ACCESS_KEY`         | Amazon secret key ID                                                 | `""`                                                       |
-| `env.FB_APP_ID`                     | For facebook channel https://www.chatwoot.com/docs/facebook-setup    | `""`                                                       |
-| `env.FB_APP_SECRET`                 | For facebook channel                                                 | `""`                                                       |
-| `env.FB_VERIFY_TOKEN`               | For facebook channel                                                 | `""`                                                       |
-| `env.SLACK_CLIENT_ID`               | For slack integration                                                | `""`                                                       |
-| `env.SLACK_CLIENT_SECRET`           | For slack integration                                                | `""`                                                       |
-| `env.TWITTER_APP_ID`                | For twitter channel                                                  | `""`                                                       |
-| `env.TWITTER_CONSUMER_KEY`          | For twitter channel                                                  | `""`                                                       |
-| `env.TWITTER_CONSUMER_SECRET`       | For twitter channel                                                  | `""`                                                       |
-| `env.TWITTER_ENVIRONMENT`           | For twitter channel                                                  | `""`                                                       |
-
-### Autoscaling
-
-| Name                                | Type                                                                 | Default Value                                              |
-| ----------------------------------- | -------------------------------------------------------------------- | ---------------------------------------------------------- |
-| `web.hpa.enabled`                   | Horizontal Pod Autoscaling for Chatwoot web                          | `false`                                                    |
-| `web.hpa.cputhreshold`              | CPU threshold for Chatwoot web                                       | `75`                                                       |
-| `web.hpa.memorythreshold`           | Memory threshold for Chatwoot web                                    | `75`                                                       |
-| `web.hpa.minpods`                   | Minimum number of pods for Chatwoot web                              | `1`                                                        |
-| `web.hpa.maxpods`                   | Maximum number of pods for Chatwoot web                              | `10`                                                       |
-| `web.replicaCount`                  | No of web pods if hpa is not enabled                                 | `1`                                                        |
-| `worker.hpa.enabled`                | Horizontal Pod Autoscaling for Chatwoot worker                       | `false`                                                    |
-| `worker.hpa.cputhreshold`           | CPU threshold for Chatwoot worker                                    | `75`                                                       |
-| `worker.hpa.memorythreshold`        | Memory threshold for Chatwoot worker                                 | `75`                                                       |
-| `worker.hpa.minpods`                | Minimum number of pods for Chatwoot worker                           | `2`                                                        |
-| `worker.hpa.maxpods`                | Maximum number of pods for Chatwoot worker                           | `10`                                                       |
-| `worker.replicaCount`               | No of worker pods if hpa is not enabled                              | `1`                                                        |
-| `autoscaling.apiVersion`            | Autoscaling API version                                              | `autoscaling/v2`                                           |
-
-### Other Parameters
-
-| Key | Type | Default | Description |
-|-----|------|---------|-------------|
-| affinity | object | `{}` |  |
-| existingEnvSecret | string | "" | Allows the use of an existing secret to set env variables |
-| fullnameOverride | string | `""` |  |
-| hooks.affinity | object | `{}` |  |
-| hooks.migrate.env | list | `[]` |  |
-| hooks.migrate.hookAnnotation | string | `"post-install,post-upgrade"` |  |
-| hooks.migrate.resources.limits.memory | string | `"1000Mi"` |  |
-| hooks.migrate.resources.requests.memory | string | `"1000Mi"` |  |
-| imagePullSecrets | list | `[]` |  |
-| ingress.annotations | object | `{}` |  |
-| ingress.enabled | bool | `false` |  |
-| ingress.hosts[0].host | string | `""` |  |
-| ingress.hosts[0].paths[0].backend.service.name | string | `"chatwoot"` |  |
-| ingress.hosts[0].paths[0].backend.service.port.number | int | `3000` |  |
-| ingress.hosts[0].paths[0].path | string | `"/"` |  |
-| ingress.hosts[0].paths[0].pathType | string | `"Prefix"` |  |
-| ingress.tls | list | `[]` |  |
-| nameOverride | string | `""` |  |
-| nodeSelector | object | `{}` |  |
-| podAnnotations | object | `{}` |  |
-| podSecurityContext | object | `{}` |  |
-| redis.master.persistence.enabled | bool | `true` |  |
-| redis.nameOverride | string | `"chatwoot-redis"` |  |
-| resources | object | `{}` |  |
-| securityContext | object | `{}` |  |
-| service.port | int | `80` |  |
-| service.type | string | `"ClusterIP"` |  |
-| serviceAccount.annotations | object | `{}` |  |
-| serviceAccount.create | bool | `true` |  |
-| serviceAccount.name | string | `""` |  |
-| services.annotations | object | `{}` |  |
-| services.internalPort | int | `3000` |  |
-| services.name | string | `"chatwoot"` |  |
-| services.targetPort | int | `3000` |  |
-| services.type | string | `"LoadBalancer"` |  |
-| tolerations | list | `[]` |  |
-
-Specify each parameter using the `--set key=value[,key=value]` argument to `helm install`. For example,
+您可以通过 `--set key=value`，或者更推荐的 `values.override.yaml` 文件来重写默认配置。
 
 ```bash
-$ helm install my-release \
-  --set env.FRONTEND_URL="chat.yourdomain.com"\
-    chatwoot/chatwoot
+$ helm install my-release -f values.override.yaml chatwoot/chatwoot
 ```
 
-The above command sets the Chatwoot server frontend URL to `chat.yourdoamain.com`.
+## 升级指南
 
-Alternatively, a YAML file that specifies the values for the parameters can be provided while installing the chart. For example,
+执行升级前，请使用 `helm repo update` 检查您要安装的 Chart 版本。我们采用了严格的语义化版本控制。
 
 ```bash
-$ helm install my-release -f values.yaml chatwoot/chatwoot
+# 升级命令
+helm upgrade chatwoot chatwoot/chatwoot -f values.override.yaml
 ```
 
-> **Tip** You can use the default `values.yaml` file.
-
-## Postgres
-
-PostgreSQL is installed along with the chart if you choose the default setup. To use an external Postgres DB, please set `postgresql.enabled` to `false` and set the variables under the Postgres section above.
-
-## Redis
-
-Redis is installed along with the chart if you choose the default setup. To use an external Redis DB, please set `redis.enabled` to `false` and set the variables under the Redis section above.
-
-# Autoscaling
-
-To enable horizontal pod autoscaling, set `web.hpa.enabled` and `worker.hpa.enabled` to `true`. Also make sure to uncomment the values under, `resources.limits` and `resources.requests`. This assumes your k8s cluster is already having a metrics-server. If not, deploy metrics-server with the following command.
-
-```
-kubectl apply -f https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml
-```
-
-## Upgrading
-
-Do `helm repo update` and check the version of charts that is going to be installed. Helm charts follows semantic versioning and so if the MAJOR version is different from your installed version, there might be breaking changes. Please refer to the changelog before upgrading.
-
-```
-# update helm repositories
-helm repo update
-# list your current installed version
-helm list
-# show the latest version of charts that is going to be installed
-helm search repo chatwoot
-```
-
-```
-#if it is major version update, refer to the changelog before proceeding
-helm upgrade chatwoot chatwoot/chatwoot -f <your-custom-values>.yaml
-```
-### To 1.x.x
-
-Make sure you are on Chatwoot helm charts version `0.9.0` before upgrading to version `1.x.x`. If not, please upgrade to `0.9.0` before proceeding.
-
-```
-helm repo update
-helm upgrade chatwoot chatwoot/chatwoot --version="0.9.0"  -f <your-custom-values>  --debug
-```
-
-This release changes the postgres and redis versions. This is a breaking change and requires manual data migration if you are not using external postgres and redis.
-
-> **Note**: This release also changes the postgres and redis auth paramaters values under `.Values.redis` and `.Values.postgres`.
-Make the necessary changes to your custom `values.yaml` file if any.
-`Values.postgresqlDatabase` --> `Values.auth.postgresqlDatabase`
-`Values.postgresqlUsername` --> `Values.auth.postgresqlUsername`
-`Values.postgresqlPassword` --> `Values.auth.postgresqlPassword`
-
-> **Note:** Append the kubectl commands with `-n chatwoot`, if you have deployed it under the chatwoot namespace.
-
-Before updating,
-
-1. Set the replica count to 0 for both Chatwoot web(`.Values.web.replicaCount`) and worker(`.Values.worker.replicaCount`) replica sets. Applying this change
-will bring down the pods count to 0. This is to ensure the database will not be having any activity and is in a state to backup.
-```
-helm upgrade chatwoot chatwoot/chatwoot --version="0.9.0" --namespace ug3 -f values.ci.yaml --create-namespace --debug
-```
-
-2. Log into the postgres pod and take a backup of your database.
- ```
- kubectl exec -it chatwoot-chatwoot-postgresql-0 -- /bin/sh
- env | grep -i postgres_password #get postgres password to use in next step
- pg_dump -Fc --no-acl --no-owner  -U postgres chatwoot_production > /tmp/cw.dump
- exit
- ```
-
- 3. Copy the backup to your local machine.
- ```
- kubectl cp pod/chatwoot-chatwoot-postgresql-0:/tmp/cw.dump ./cw.dump
- ```
-
- 4. Delete the deployments.
- ```
- helm delete chatwoot
- kubectl get pvc
- # this will delete the database volumes
- # make sure you have backed up before proceeding
- kubectl delete pvc <data-postgres->
- kubectl delete pvc <redis>
- ```
-
-5. Update and install new version of charts.
-```
-helm repo update
-#reset web.replicaCount and worker.replicaCount to your previous values
-helm install chatwoot chatwoot/chatwoot -f <your-values.yaml> #-n chatwoot
-```
-
-6. Copy the local db backup into postgres pod.
-```
-kubectl cp cw.dump chatwoot-chatwoot-postgresql-0:/tmp/cw.dump
-```
-
-7. Exec into the postgres pod and drop the database.
-```
- kubectl exec -it chatwoot-chatwoot-postgresql-0 -- /bin/sh
- psql -u postgres -d postgres
- # this is a destructive action
- # remove -- to take effect
- -- DROP DATABASE chatwoot_production with (FORCE);
- exit
-```
-
-8. Restore the database from the backup. If you are seeing no errors, the databse has been restored and you
-are good to go.
-```
- pg_restore --verbose --clean --no-acl --no-owner --create -U postgres -d postgres /tmp/cw.dump
-```
-
-9. Exec into the web pod and remove the onboarding variable in redis.
-
-```
-kubectl exec -it chatwoot-web-xxxxxxxxxx -- /bin/sh
-RAILS_ENV=production bundle exec rails c
-::Redis::Alfred.delete(::Redis::Alfred::CHATWOOT_INSTALLATION_ONBOARDING)
-```
-
-10. Load the Chatwoot web url, log in using the old credentials and verify the contents. Voila! Thats it!!
-
-### To 0.9.x
-
-This release adds support for horizontal pod autoscaling(hpa) for chatwoot-web and chatwoot-worker deployments.
-Also, this changes the default redis replica count to `1`. The `Values.web.replicas` and `Values.worker. replicas` parameters
-where renamed to `Values.web.replicaCount` and `Values.worker.replicaCount` respectively. Also `services.internlPort` was renamed
-to `services.internalPort`.
-
-Please make the necessary changes in your custom values file if needed.
-
-### To 0.8.x
-
-Move from Kubernetes ConfigMap to Kubernetes Secrets for environment variables. This is not a breaking change.
-
-### To 0.6.x
-
-Existing labels were causing issues with `helm upgrade`. `0.6.x` introduces breaking changes related to selector
-labels used for deployments. Please delete your helm release and recreate it. Deleting your helm release will
-not delete your persistent volumes used for Redis, and Postgres and as such your data should be safe.
-
-```
-helm delete chatwoot
-helm repo update
-helm install chatwoot chatwoot/chatwoot
-```
+**本定制分支 3.3.39 (App v4.13.0) 升级说明**：
+- 此版本已经为您彻底解除了由上游 Label 修改导致的 `Deployment.apps is invalid: field is immutable` 报错。您可以像往常一样实现**零停机滚动升级**。
+- 请务必确保您的自定义 `values.yaml` 中，没有遗留过时的 `postgresql:` 或是 `redis:` 独立对象区块，这些区块已经被彻底废弃。请直接在 `env:` 中填入对应地址和密钥。
