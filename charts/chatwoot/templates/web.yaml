@@ -1,92 +1,120 @@
-{{/* --- [ Web 核心单元: Deployment + Service ] --- */}}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "chatwoot.full" . }}-web
+  name: {{ template "chatwoot.fullname" . }}-web
+  creationTimestamp: null
   labels:
-    {{- include "chatwoot.labels" . | nindent 4 }}
-    role: web
+    app: {{ template "chatwoot.fullname" . }}
+    chart: "{{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}"
+    release: "{{ .Release.Name }}"
+    heritage: "{{ .Release.Service }}"
 spec:
-  replicas: {{ include "chatwoot.app.replicas" (dict "context" . "component" "web") }}
+  replicas: {{ int .Values.web.replicaCount }}
   selector:
     matchLabels:
-      {{- include "chatwoot.selector" . | nindent 6 }}
+      {{- include "chatwoot.selectorLabels" . | nindent 6 }}
       role: web
-  strategy:
-    type: RollingUpdate
-    rollingUpdate:
-      maxUnavailable: 0
-      maxSurge: 1
+  strategy: {}
   template:
     metadata:
+      creationTimestamp: null
       labels:
-        {{- include "chatwoot.selector" . | nindent 8 }}
+        {{- include "chatwoot.selectorLabels" . | nindent 8 }}
         role: web
       annotations:
-        checksum/config: {{ include (print $.Template.BasePath "/base.yaml") . | sha256sum }}
+        checksum/config: {{ include (print $.Template.BasePath "/env-secret.yaml") . | sha256sum }}
+        {{- with .Values.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
     spec:
-      {{- include "chatwoot.pod.common" . | nindent 6 }}
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 6 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- if .Values.nodeSelector }}
+      nodeSelector: {{- include "common.tplvalues.render" (dict "value" .Values.nodeSelector "context" $) | nindent 8 }}
+      {{- end }}
       containers:
-        - name: web
-          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
-          imagePullPolicy: {{ .Values.image.pullPolicy }}
-          command: [docker/entrypoints/rails.sh]
-          args: [bundle, exec, rails, s, -p, "{{ .Values.services.internalPort }}", -b, 0.0.0.0]
-          ports:
-            - containerPort: {{ .Values.services.internalPort }}
-          env:
-            {{- include "chatwoot.env.common" . | nindent 12 }}
+        - args:
+            - bundle
+            - exec
+            - rails
+            - s
+            - -p
+            - {{ .Values.services.internalPort | quote}}
+            - -b
+            - 0.0.0.0
+          command:
+            - docker/entrypoints/rails.sh
+
           envFrom:
-            {{- include "chatwoot.envFrom.common" . | nindent 12 }}
-          volumeMounts:
-            - name: cache
-              mountPath: /app/tmp
-            {{- if .Values.persistence.enabled }}
-            - name: storage
-              mountPath: /app/storage
-            {{- end }}
-          {{- if .Values.web.resources }}
-          resources:
-            {{- toYaml .Values.web.resources | nindent 12 }}
+            - secretRef:
+                name: {{ template "chatwoot.fullname" . }}-env
+          {{- if .Values.existingEnvSecret }}
+            - secretRef:
+                name: {{ .Values.existingEnvSecret }}
           {{- end }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          name: {{ .Chart.Name }}-web
+          ports:
+            - containerPort: {{ int .Values.services.internalPort }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          {{- with .Values.web.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
           livenessProbe:
             httpGet:
               path: /health
-              port: {{ .Values.services.internalPort }}
-            initialDelaySeconds: 30
-            periodSeconds: 10
-            failureThreshold: 3
+              port: {{ int .Values.services.internalPort }}
+            {{- toYaml .Values.web.livenessProbe | nindent 12 }}
           readinessProbe:
             httpGet:
-              path: /health
-              port: {{ .Values.services.internalPort }}
-            initialDelaySeconds: 15
-            periodSeconds: 10
-            timeoutSeconds: 5
-            successThreshold: 1
-            failureThreshold: 10
+              path: /api
+              port: {{ int .Values.services.internalPort }}
+            {{- toYaml .Values.web.readinessProbe | nindent 12 }}
           startupProbe:
             httpGet:
               path: /health
-              port: {{ .Values.services.internalPort }}
-            initialDelaySeconds: 30
-            periodSeconds: 10
-            failureThreshold: 30
+              port: {{ int .Values.services.internalPort }}
+            {{- toYaml .Values.web.startupProbe | nindent 12 }}
+          volumeMounts:
+            - name: cache
+              mountPath: /app/tmp
+      serviceAccountName: {{ include "chatwoot.serviceAccountName" . }}
+      {{- if .Values.securityContext }}
+      securityContext: {{ .Values.securityContext | toYaml | nindent 8 }}
+      {{- end }}
+      volumes:
+        - name: cache
+          emptyDir: {}
 ---
-{{/* --- [ Web 内网访问服务 ] --- */}}
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ include "chatwoot.full" . }}
+  name: {{ template "chatwoot.fullname" . }}
+  creationTimestamp: null
   labels:
-    {{- include "chatwoot.labels" . | nindent 4 }}
+    app: {{ template "chatwoot.fullname" . }}
+    chart: "{{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}"
+    release: "{{ .Release.Name }}"
+    heritage: "{{ .Release.Service }}"
+  {{- with .Values.services.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
 spec:
-  type: {{ .Values.service.type }}
   ports:
-    - name: http
-      port: {{ .Values.service.port }}
-      targetPort: {{ .Values.services.targetPort }}
-      protocol: TCP
+    - name: {{ .Values.services.name | quote}}
+      port: {{ int .Values.services.internalPort }}
+      targetPort: {{ int .Values.services.targetPort }}
+  type: {{ .Values.services.type }}
   selector:
-    {{- include "chatwoot.selector" . | nindent 4 }}
+    {{- include "chatwoot.selectorLabels" . | nindent 4 }}
     role: web
+status:
+  loadBalancer: {}
