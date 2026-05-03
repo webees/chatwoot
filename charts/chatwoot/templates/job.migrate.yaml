@@ -22,16 +22,33 @@ spec:
           args:
             - -c
             - >-
-              DB_READY="pg_isready -h {{ include "chatwoot.db.host" . }} -p {{ include "chatwoot.db.port" . }}";
-              until $DB_READY;
+              until pg_isready
+              -h {{ include "chatwoot.db.host" . | quote }}
+              -p {{ include "chatwoot.db.port" . | quote }}
+              -U {{ include "chatwoot.db.username" . | quote }}
+              -d {{ include "chatwoot.db.database" . | quote }}
+              -t 5;
               do
+                echo "正在等待数据库 {{ include "chatwoot.db.host" . }}:{{ include "chatwoot.db.port" . }}";
                 sleep 2;
               done;
               echo "数据库已准备就绪，可以接收连接。" ;
         - name: init-cache
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
-          command: ["sh", "-c", "until getent hosts {{ include "chatwoot.cache.host" . }} ; do echo 正在等待 {{ include "chatwoot.cache.host" . }} ; sleep 2; done;"]
+          command: ["/bin/sh"]
+          args:
+            - -c
+            - >-
+              until ruby -rsocket -rtimeout -e
+              'Timeout.timeout(5) { socket = TCPSocket.new(ARGV[0], Integer(ARGV[1])); socket.close }'
+              {{ include "chatwoot.cache.host" . | quote }}
+              {{ include "chatwoot.cache.port" . | quote }};
+              do
+                echo "正在等待缓存 {{ include "chatwoot.cache.host" . }}:{{ include "chatwoot.cache.port" . }}";
+                sleep 2;
+              done;
+              echo "缓存已准备就绪，可以接收连接。" ;
       containers:
         - name: migrate
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
