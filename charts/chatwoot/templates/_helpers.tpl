@@ -99,6 +99,8 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end -}}
 
 {{- define "chatwoot.db.port" -}}{{ default "5432" .Values.postgresql.postgresqlPort }}{{ end -}}
+{{- define "chatwoot.db.username" -}}{{ default "postgres" .Values.postgresql.auth.username }}{{ end -}}
+{{- define "chatwoot.db.database" -}}{{ default "chatwoot_production" .Values.postgresql.auth.database }}{{ end -}}
 
 {{- define "chatwoot.cache.host" -}}
 {{- if .Values.redis.host }}{{ .Values.redis.host }}
@@ -160,8 +162,8 @@ terminationGracePeriodSeconds: 60
 {{- define "chatwoot.env.secretData" -}}
 POSTGRES_HOST: {{ include "chatwoot.db.host" . | b64enc | quote }}
 POSTGRES_PORT: {{ default "5432" .Values.postgresql.postgresqlPort | toString | b64enc | quote }}
-POSTGRES_USERNAME: {{ default "postgres" .Values.postgresql.auth.username | b64enc | quote }}
-POSTGRES_DATABASE: {{ default "chatwoot_production" .Values.postgresql.auth.database | b64enc | quote }}
+POSTGRES_USERNAME: {{ include "chatwoot.db.username" . | b64enc | quote }}
+POSTGRES_DATABASE: {{ include "chatwoot.db.database" . | b64enc | quote }}
 {{- if and (not .Values.postgresql.enabled) (not .Values.postgresql.auth.existingSecret) }}
 {{- /* 外部 PG：密码通过 values.override.yaml 的 env.POSTGRES_PASSWORD 传入 */}}
 {{- else if not .Values.postgresql.auth.existingSecret }}

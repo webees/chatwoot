@@ -20,7 +20,22 @@ tests:
       - matchRegex:
           path: spec.template.spec.initContainers[0].args[1]
           # Match the expanded script but keep it flexible
-          pattern: "pg_isready -h chatwoot-postgresql"
+          pattern: "pg_isready -h \"chatwoot-postgresql\" -p \"5432\" -U \"chatwoot\" -d \"chatwoot\" -t 5"
+
+  - it: should pass configured postgres identity to migrate readiness checks
+    set:
+      postgresql:
+        enabled: false
+        postgresqlHost: "pg-pooler-rw.cnpg.svc.cluster.local"
+        postgresqlPort: "5432"
+        auth:
+          username: chatwoot
+          database: chatwoot
+    template: job.migrate.yaml
+    asserts:
+      - matchRegex:
+          path: spec.template.spec.initContainers[0].args[1]
+          pattern: "pg_isready -h \"pg-pooler-rw.cnpg.svc.cluster.local\" -p \"5432\" -U \"chatwoot\" -d \"chatwoot\" -t 5"
 
   - it: should render environment secret correctly
     template: base.yaml
@@ -99,15 +114,15 @@ tests:
           path: spec.template.spec.affinity.nodeAffinity.requiredDuringSchedulingIgnoredDuringExecution.nodeSelectorTerms[0].matchExpressions[0].key
           value: "worker"
 
-  - it: should use the Chatwoot image and getent for cache readiness
+  - it: should use the Chatwoot image and TCP checks for cache readiness
     template: job.migrate.yaml
     asserts:
       - equal:
           path: spec.template.spec.initContainers[1].image
           value: chatwoot/chatwoot:v4.13.0
       - matchRegex:
-          path: spec.template.spec.initContainers[1].command[2]
-          pattern: "getent hosts valkey-rw.valkey.svc.cluster.local"
+          path: spec.template.spec.initContainers[1].args[1]
+          pattern: "TCPSocket.new\\(ARGV\\[0\\], Integer\\(ARGV\\[1\\]\\)\\).*\"valkey-rw.valkey.svc.cluster.local\" \"6379\""
 
   - it: should allow probe timings to be customized without changing paths
     template: web.yaml

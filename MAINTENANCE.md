@@ -90,7 +90,7 @@ git log --oneline main..upstream/main
 ### 当前上游同步状态
 
 - 已对比 `chatwoot/charts` 上游 `main`：`dbc95a4f0 feat: upgrade charts to chatwoot v4.13.0 (#204)`
-- 选择性采纳：Chatwoot `v4.13.0` 镜像、可配置 Web 探针、迁移 Job 使用 Chatwoot 镜像与 `getent hosts` 检查 Redis
+- 选择性采纳：Chatwoot `v4.13.0` 镜像、可配置 Web 探针、迁移 Job 使用 Chatwoot 镜像，并结合 PgBouncer/CNPG 真实要求使用带 `-U/-d` 的 `pg_isready` 与 Redis/Valkey TCP 检查
 - 明确不采纳：上游模板重命名、拆分 HPA/ServiceAccount/Secret、移除本地 helm-unittest 套件等会影响 Rancher 升级兼容性的结构性改动
 
 ### 允许选择性采纳的上游变更
@@ -127,10 +127,10 @@ helm unittest charts/chatwoot
 升级兼容性变更还需要检查关键字段：
 
 ```bash
-rg -n "name: chatwoot-web|name: chatwoot-worker|name: chatwoot-storage|name: chatwoot-env|path: /health|getent hosts" /tmp/chatwoot-template.yaml
+rg -n "name: chatwoot-web|name: chatwoot-worker|name: chatwoot-storage|name: chatwoot-env|path: /health|pg_isready|TCPSocket.new" /tmp/chatwoot-template.yaml
 ```
 
-当前测试基线：`11` 个 test suites，`50` 个用例。新增模板能力必须补充 helm-unittest，尤其是 selector、Service、Secret、PVC、probe、hook 和外部 Secret。
+当前测试基线：`11` 个 test suites，`51` 个用例。新增模板能力必须补充 helm-unittest，尤其是 selector、Service、Secret、PVC、probe、hook 和外部 Secret。
 
 ---
 
@@ -148,7 +148,7 @@ helm upgrade chatwoot ./charts/chatwoot \
 2. 超时时间设为 `600` 秒以上
 3. 保持 `fullnameOverride: "chatwoot"`，不要在升级时修改 Release 名、Service 名、PVC 名或 selector 相关配置
 4. 使用 Rancher Values 或 `values.override.yaml` 管理 `SECRET_KEY_BASE`、`POSTGRES_PASSWORD` 等敏感配置，避免提交到仓库
-5. 从 `3.3.38` 升级到 `3.3.45` 的预期变更仅限镜像版本、Web readiness 默认改回轻量 `/health`、探针参数渲染顺序、迁移 Job 的 Redis 检查方式，以及兼容性配置能力增强；Deployment selector、Service、Secret、PVC 名称必须保持不变
+5. 从 `3.3.38` 升级到 `3.3.46` 的预期变更仅限镜像版本、Web readiness 默认改回轻量 `/health`、探针参数渲染顺序、迁移 Job 的 PgBouncer/CNPG 与 Redis/Valkey 等待逻辑，以及兼容性配置能力增强；Deployment selector、Service、Secret、PVC 名称必须保持不变
 
 ### 推荐升级路径
 
@@ -205,6 +205,7 @@ kubectl get pods -n chatwoot -o wide
 
 | 版本 | 关键变更 |
 |------|----------|
+| **v3.3.46** | 线上环境修复：迁移 Job 的 `init-db` 使用带 `-U/-d` 的 `pg_isready`，兼容 PgBouncer/CNPG 对用户名和数据库的要求；`init-cache` 改为 Redis/Valkey TCP 检查，避免只解析 DNS 造成误判；测试扩展到 51 个用例 |
 | **v3.3.45** | Rancher 升级兼容修复：默认 readinessProbe 改回轻量 `/health`，避免 `/api` 的 Redis/Postgres 深度检查拖慢或阻断升级；保留 `web.readinessProbe.path: /api` 作为显式依赖感知模式；测试扩展到 50 个用例 |
 | **v3.3.44** | Rancher 升级兼容修复：放宽 `storage.type` schema，允许旧 Values 中的历史存储类型通过校验，并按既有模板逻辑安全回退到本地存储；测试扩展到 49 个用例 |
 | **v3.3.43** | 非破坏性优化：收窄 checksum 到 Secret data，支持 pod/serviceAccount 注解、nodeSelector/tolerations、迁移 Job 独立资源配置，修正自定义 ServiceAccount 名称创建，并将测试扩展到 48 个用例 |
