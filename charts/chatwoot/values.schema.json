@@ -22,7 +22,7 @@
       "properties": {
         "replicaCount": { "type": "integer", "minimum": 1 },
         "livenessProbe": { "$ref": "#/definitions/probeSettings" },
-        "readinessProbe": { "$ref": "#/definitions/probeSettings" },
+        "readinessProbe": { "$ref": "#/definitions/readinessProbeSettings" },
         "startupProbe": { "$ref": "#/definitions/probeSettings" },
         "hpa": {
           "type": "object",
@@ -205,6 +205,21 @@
         "successThreshold": { "type": "integer", "minimum": 1 },
         "failureThreshold": { "type": "integer", "minimum": 1 }
       }
+    },
+    "readinessProbeSettings": {
+      "allOf": [
+        { "$ref": "#/definitions/probeSettings" },
+        {
+          "type": "object",
+          "properties": {
+            "path": {
+              "type": "string",
+              "pattern": "^/",
+              "description": "Readiness endpoint. Use /health for lightweight web readiness or /api for dependency-aware Redis/Postgres checks."
+            }
+          }
+        }
+      ]
     },
     "note": {
       "description": "This schema intentionally allows additional properties for Rancher and existing override compatibility."

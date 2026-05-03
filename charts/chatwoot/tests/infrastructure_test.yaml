@@ -84,13 +84,13 @@ tests:
           path: spec.rules[0].http.paths[0].backend.service.name
           value: chatwoot
 
-  - it: should use api readiness checks for dependency-aware rollout
+  - it: should use lightweight readiness checks by default
     template: web.yaml
     documentIndex: 0
     asserts:
       - equal:
           path: spec.template.spec.containers[0].readinessProbe.httpGet.path
-          value: /api
+          value: /health
 
   - it: should default all pods to worker nodes (Hard Constraint)
     template: job.migrate.yaml
@@ -123,10 +123,22 @@ tests:
     asserts:
       - equal:
           path: spec.template.spec.containers[0].readinessProbe.httpGet.path
-          value: /api
+          value: /health
       - equal:
           path: spec.template.spec.containers[0].readinessProbe.periodSeconds
           value: 7
+
+  - it: should allow api readiness checks when explicitly requested
+    template: web.yaml
+    set:
+      web:
+        readinessProbe:
+          path: /api
+    documentIndex: 0
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].readinessProbe.httpGet.path
+          value: /api
 
   - it: should apply migrate hook resources from hooks values
     template: job.migrate.yaml
