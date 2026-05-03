@@ -71,20 +71,31 @@ jobs:
           helm repo add bitnami "https://charts.bitnami.com/bitnami"
           helm dep build charts/chatwoot/
 
-      - name: Auto-increment Chart version
+      - name: Sync Chart version metadata
         run: |
           VERSION=$(yq eval '.version' charts/chatwoot/Chart.yaml)
-          MAJOR=$(echo $VERSION | cut -d. -f1)
-          MINOR=$(echo $VERSION | cut -d. -f2)
-          PATCH=$(echo $VERSION | cut -d. -f3)
-          NEW_PATCH=$((PATCH + 1))
-          NEW_VERSION="$MAJOR.$MINOR.$NEW_PATCH"
+          LATEST_VERSION=$(git tag -l 'chatwoot-[0-9]*' | sed 's/^chatwoot-//' | sort -V | tail -n 1)
+          TARGET_VERSION="$VERSION"
+
+          if [ -n "$LATEST_VERSION" ]; then
+            HIGHEST_VERSION=$(printf '%s\n%s\n' "$LATEST_VERSION" "$VERSION" | sort -V | tail -n 1)
+            if [ "$VERSION" = "$LATEST_VERSION" ] || [ "$HIGHEST_VERSION" = "$LATEST_VERSION" ]; then
+              MAJOR=$(echo "$LATEST_VERSION" | cut -d. -f1)
+              MINOR=$(echo "$LATEST_VERSION" | cut -d. -f2)
+              PATCH=$(echo "$LATEST_VERSION" | cut -d. -f3)
+              TARGET_VERSION="$MAJOR.$MINOR.$((PATCH + 1))"
+            fi
+          fi
           
-          yq eval ".version = \"$NEW_VERSION\"" -i charts/chatwoot/Chart.yaml
-          yq eval ".description = (.description | sub(\"v[0-9.]+\", \"v$NEW_VERSION\"))" -i charts/chatwoot/Chart.yaml
+          export TARGET_VERSION
+          yq eval ".version = \"$TARGET_VERSION\"" -i charts/chatwoot/Chart.yaml
+          yq eval ".description = (.description | sub(\"v[0-9.]+\", \"v$TARGET_VERSION\"))" -i charts/chatwoot/Chart.yaml
+          perl -0pi -e 's/Chart v\d+\.\d+\.\d+/Chart v$ENV{TARGET_VERSION}/g' README.md
+          perl -0pi -e 's/升级到 `\d+\.\d+\.\d+`/升级到 `$ENV{TARGET_VERSION}`/g' MAINTENANCE.md
+          perl -0pi -e 's/\| \*\*v\d+\.\d+\.\d+\*\* \|/| **v$ENV{TARGET_VERSION}** |/' MAINTENANCE.md
           
-          git add charts/chatwoot/Chart.yaml
-          git commit -m "chore: auto-increment version to $NEW_VERSION [skip ci]" || echo "No changes to commit"
+          git add charts/chatwoot/Chart.yaml README.md MAINTENANCE.md
+          git commit -m "chore: 同步版本到 $TARGET_VERSION [skip ci]" || echo "No changes to commit"
           git push origin main
 
       - name: Run chart-releaser
