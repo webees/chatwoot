@@ -53,6 +53,16 @@ tests:
           path: spec.template.spec.containers[0].env
           content: { name: ACTIVE_STORAGE_SERVICE, value: "local" }
 
+  - it: should accept legacy storage values and fall back to local storage
+    set:
+      storage: { type: filesystem }
+    template: web.yaml
+    documentIndex: 0
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content: { name: ACTIVE_STORAGE_SERVICE, value: "local" }
+
   - it: should preserve PVC name for Rancher upgrades
     set:
       persistence:

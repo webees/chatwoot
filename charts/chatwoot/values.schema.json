@@ -55,7 +55,11 @@
     "storage": {
       "type": "object",
       "properties": {
-        "type": { "type": "string", "enum": ["local", "s3", "gcs"] },
+        "type": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Recognized values are local, s3, and gcs. Unknown legacy values are accepted for Rancher upgrade compatibility and render as local storage."
+        },
         "s3": {
           "type": "object",
           "properties": {

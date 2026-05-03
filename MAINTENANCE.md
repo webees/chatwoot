@@ -148,7 +148,7 @@ helm upgrade chatwoot ./charts/chatwoot \
 2. 超时时间设为 `600` 秒以上
 3. 保持 `fullnameOverride: "chatwoot"`，不要在升级时修改 Release 名、Service 名、PVC 名或 selector 相关配置
 4. 使用 Rancher Values 或 `values.override.yaml` 管理 `SECRET_KEY_BASE`、`POSTGRES_PASSWORD` 等敏感配置，避免提交到仓库
-5. 从 `3.3.38` 升级到 `3.3.43` 的预期变更仅限镜像版本、Web readiness 路径、探针参数渲染顺序、迁移 Job 的 Redis 检查方式，以及兼容性配置能力增强；Deployment selector、Service、Secret、PVC 名称必须保持不变
+5. 从 `3.3.38` 升级到 `3.3.44` 的预期变更仅限镜像版本、Web readiness 路径、探针参数渲染顺序、迁移 Job 的 Redis 检查方式，以及兼容性配置能力增强；Deployment selector、Service、Secret、PVC 名称必须保持不变
 
 ### 推荐升级路径
 
@@ -205,6 +205,7 @@ kubectl get pods -n chatwoot -o wide
 
 | 版本 | 关键变更 |
 |------|----------|
+| **v3.3.44** | Rancher 升级兼容修复：放宽 `storage.type` schema，允许旧 Values 中的历史存储类型通过校验，并按既有模板逻辑安全回退到本地存储；测试扩展到 49 个用例 |
 | **v3.3.43** | 非破坏性优化：收窄 checksum 到 Secret data，支持 pod/serviceAccount 注解、nodeSelector/tolerations、迁移 Job 独立资源配置，修正自定义 ServiceAccount 名称创建，并将测试扩展到 48 个用例 |
 | **v3.3.40** | 基于 3.3.38 稳定架构升级 Chatwoot v4.13.0；采纳上游可配置探针、`/api` readiness、`getent` Redis 检查；补充 Rancher 升级保护测试与兼容性 schema；保留稳定 selector、统一 Pod 规范与 `policy.yaml` |
 | **v3.3.30** | 升级 v4.12.1：采纳上游 startupProbe、memory HPA、existingEnvSecret |
