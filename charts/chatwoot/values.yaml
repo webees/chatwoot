@@ -91,9 +91,14 @@ ingress:
 
 # --- [ 8. 元数据与生命周期 ] ---
 fullnameOverride: "chatwoot"
-serviceAccount: { create: true }
+podAnnotations: {}
+nodeSelector: {}
+tolerations: []
+serviceAccount: { create: true, annotations: {} }
 hooks:
-  migrate: { hookAnnotation: "post-install,post-upgrade" }
+  migrate:
+    hookAnnotation: "post-install,post-upgrade"
+    resources: {}
 existingEnvSecret: ""
 
 # --- [ 9. 智能迁移工具 ] ---

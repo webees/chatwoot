@@ -50,6 +50,45 @@ tests:
           path: spec.strategy.rollingUpdate.maxUnavailable
           value: 0
 
+  - it: should allow pod annotations and scheduling hints without replacing hard affinity
+    set:
+      podAnnotations:
+        rollout-note: "rancher-safe"
+      nodeSelector:
+        dedicated: chatwoot
+      tolerations:
+        - key: dedicated
+          operator: Equal
+          value: chatwoot
+          effect: NoSchedule
+    template: web.yaml
+    documentIndex: 0
+    asserts:
+      - equal:
+          path: spec.template.metadata.annotations.rollout-note
+          value: rancher-safe
+      - equal:
+          path: spec.template.spec.nodeSelector.dedicated
+          value: chatwoot
+      - equal:
+          path: spec.template.spec.tolerations[0].key
+          value: dedicated
+      - equal:
+          path: spec.template.spec.affinity.nodeAffinity.requiredDuringSchedulingIgnoredDuringExecution.nodeSelectorTerms[0].matchExpressions[0].key
+          value: worker
+
+  - it: should reference a custom service account name from pods
+    set:
+      serviceAccount:
+        create: true
+        name: chatwoot-runner
+    template: web.yaml
+    documentIndex: 0
+    asserts:
+      - equal:
+          path: spec.template.spec.serviceAccountName
+          value: chatwoot-runner
+
   - it: should scale via profile
     set:
       global: { mode: production }

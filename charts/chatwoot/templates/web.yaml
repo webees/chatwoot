@@ -23,7 +23,10 @@ spec:
         {{- include "chatwoot.selector" . | nindent 8 }}
         role: web
       annotations:
-        checksum/config: {{ include (print $.Template.BasePath "/base.yaml") . | sha256sum }}
+        checksum/config: {{ include "chatwoot.env.secretData" . | sha256sum }}
+        {{- with .Values.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
     spec:
       {{- include "chatwoot.pod.common" . | nindent 6 }}
       containers:

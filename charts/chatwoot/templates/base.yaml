@@ -6,25 +6,16 @@ metadata:
   labels: {{ include "chatwoot.labels" . | nindent 4 }}
 type: Opaque
 data:
-  POSTGRES_HOST: {{ include "chatwoot.db.host" . | b64enc | quote }}
-  POSTGRES_PORT: {{ default "5432" .Values.postgresql.postgresqlPort | toString | b64enc | quote }}
-  POSTGRES_USERNAME: {{ default "postgres" .Values.postgresql.auth.username | b64enc | quote }}
-  POSTGRES_DATABASE: {{ default "chatwoot_production" .Values.postgresql.auth.database | b64enc | quote }}
-  {{- if and (not .Values.postgresql.enabled) (not .Values.postgresql.auth.existingSecret) }}
-  {{- /* 外部 PG：密码通过 values.override.yaml 的 env.POSTGRES_PASSWORD 传入 */}}
-  {{- else if not .Values.postgresql.auth.existingSecret }}
-  POSTGRES_PASSWORD: {{ default "postgres" .Values.postgresql.auth.postgresPassword | b64enc | quote }}
-  {{- end }}
-
-  REDIS_URL: {{ (printf "redis://%s:%s" (include "chatwoot.cache.host" .) (default "6379" .Values.redis.port | toString)) | b64enc | quote }}
-  {{- range $k, $v := .Values.env }}
-  {{ $k }}: {{ $v | toString | b64enc | quote }}
-  {{- end }}
+{{ include "chatwoot.env.secretData" . | nindent 2 }}
 ---
 {{- if .Values.serviceAccount.create }}
 apiVersion: v1
 kind: ServiceAccount
 metadata:
-  name: {{ include "chatwoot.full" . }}
+  name: {{ include "chatwoot.serviceAccountName" . }}
   labels: {{ include "chatwoot.labels" . | nindent 4 }}
+  {{- with .Values.serviceAccount.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
 {{- end }}
