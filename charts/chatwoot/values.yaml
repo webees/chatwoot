@@ -39,6 +39,7 @@ web:
     periodSeconds: 10
     failureThreshold: 3
   readinessProbe:
+    path: /health # /health 轻量检查；如需 Redis/Postgres 深度检查可设为 /api
     initialDelaySeconds: 15
     periodSeconds: 10
     timeoutSeconds: 5

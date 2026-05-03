@@ -57,11 +57,12 @@ spec:
               path: /health
               port: {{ .Values.services.internalPort }}
             {{- toYaml .Values.web.livenessProbe | nindent 12 }}
+          {{- $readinessProbe := default dict .Values.web.readinessProbe }}
           readinessProbe:
             httpGet:
-              path: /api
+              path: {{ default "/health" $readinessProbe.path | quote }}
               port: {{ .Values.services.internalPort }}
-            {{- toYaml .Values.web.readinessProbe | nindent 12 }}
+            {{- omit $readinessProbe "path" | toYaml | nindent 12 }}
           startupProbe:
             httpGet:
               path: /health
