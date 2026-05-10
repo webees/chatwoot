@@ -122,7 +122,7 @@ tests:
           value: chatwoot/chatwoot:v4.13.0
       - matchRegex:
           path: spec.template.spec.initContainers[1].args[1]
-          pattern: "TCPSocket.new\\(ARGV\\[0\\], Integer\\(ARGV\\[1\\]\\)\\).*\"valkey-rw.valkey.svc.cluster.local\" \"6379\""
+          pattern: "TCPSocket.new\\(ARGV\\[0\\], Integer\\(ARGV\\[1\\]\\)\\).*\"valkey-rw.valkey.svc.cluster.local\" \"6379\" \"5\""
 
   - it: should allow probe timings to be customized without changing paths
     template: web.yaml
@@ -172,3 +172,42 @@ tests:
       - equal:
           path: spec.template.spec.containers[0].resources.requests.memory
           value: 256Mi
+
+  - it: should allow migrate hook waiting and lifecycle knobs to be tuned
+    template: job.migrate.yaml
+    set:
+      hooks:
+        migrate:
+          backoffLimit: 2
+          activeDeadlineSeconds: 900
+          ttlSecondsAfterFinished: 120
+          wait:
+            timeoutSeconds: 9
+            intervalSeconds: 4
+          podAnnotations:
+            sidecar.istio.io/inject: "false"
+    asserts:
+      - equal:
+          path: spec.backoffLimit
+          value: 2
+      - equal:
+          path: spec.activeDeadlineSeconds
+          value: 900
+      - equal:
+          path: spec.ttlSecondsAfterFinished
+          value: 120
+      - equal:
+          path: spec.template.metadata.annotations["sidecar.istio.io/inject"]
+          value: "false"
+      - matchRegex:
+          path: spec.template.spec.initContainers[0].args[1]
+          pattern: "-t 9"
+      - matchRegex:
+          path: spec.template.spec.initContainers[0].args[1]
+          pattern: "sleep 4"
+      - matchRegex:
+          path: spec.template.spec.initContainers[1].args[1]
+          pattern: "\"valkey-rw.valkey.svc.cluster.local\" \"6379\" \"9\""
+      - matchRegex:
+          path: spec.template.spec.initContainers[1].args[1]
+          pattern: "sleep 4"

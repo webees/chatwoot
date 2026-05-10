@@ -47,6 +47,11 @@
 - 适用于 External Secrets Operator、Sealed Secrets 等场景
 - 后加载的同名 key 会覆盖前者
 
+### 9. 迁移 Hook 稳态控制
+- `hooks.migrate.backoffLimit` 显式保留 Kubernetes Job 默认重试次数，便于 Rancher UI 审计
+- `hooks.migrate.wait.timeoutSeconds` / `intervalSeconds` 控制 PgBouncer/CNPG 与 Valkey 等待节奏，默认仍为 `5s` 超时、`2s` 间隔
+- `hooks.migrate.activeDeadlineSeconds`、`ttlSecondsAfterFinished` 和 `podAnnotations` 均为可选增强；默认不渲染，不改变升级行为
+
 ---
 
 ## 🔒 升级兼容性红线
@@ -130,7 +135,7 @@ helm unittest charts/chatwoot
 rg -n "name: chatwoot-web|name: chatwoot-worker|name: chatwoot-storage|name: chatwoot-env|path: /health|pg_isready|TCPSocket.new" /tmp/chatwoot-template.yaml
 ```
 
-当前测试基线：`11` 个 test suites，`51` 个用例。新增模板能力必须补充 helm-unittest，尤其是 selector、Service、Secret、PVC、probe、hook 和外部 Secret。
+当前测试基线：`11` 个 test suites，`52` 个用例。新增模板能力必须补充 helm-unittest，尤其是 selector、Service、Secret、PVC、probe、hook 和外部 Secret。
 
 ---
 
@@ -148,7 +153,7 @@ helm upgrade chatwoot ./charts/chatwoot \
 2. 超时时间设为 `600` 秒以上
 3. 保持 `fullnameOverride: "chatwoot"`，不要在升级时修改 Release 名、Service 名、PVC 名或 selector 相关配置
 4. 使用 Rancher Values 或 `values.override.yaml` 管理 `SECRET_KEY_BASE`、`POSTGRES_PASSWORD` 等敏感配置，避免提交到仓库
-5. 从 `3.3.38` 升级到 `3.3.46` 的预期变更仅限镜像版本、Web readiness 默认改回轻量 `/health`、探针参数渲染顺序、迁移 Job 的 PgBouncer/CNPG 与 Redis/Valkey 等待逻辑，以及兼容性配置能力增强；Deployment selector、Service、Secret、PVC 名称必须保持不变
+5. 从 `3.3.38` 升级到 `3.3.47` 的预期变更仅限镜像版本、Web readiness 默认改回轻量 `/health`、探针参数渲染顺序、迁移 Job 的 PgBouncer/CNPG 与 Redis/Valkey 等待逻辑，以及兼容性配置能力增强；Deployment selector、Service、Secret、PVC 名称必须保持不变
 
 ### 推荐升级路径
 
@@ -162,6 +167,44 @@ helm upgrade chatwoot ./charts/chatwoot \
 ```bash
 # 确保目标节点已打标签
 kubectl label node <node-name> worker=true longhorn=true
+```
+
+---
+
+## 🧯 迁移 Job 排障速查
+
+迁移 Hook 是 Rancher 升级最容易超时的位置。排障顺序固定为：先看 init 容器，再看真正的 migrate 容器。
+
+```bash
+kubectl get pods -n chatwoot -l job-name=chatwoot-migrate -o wide
+kubectl logs -n chatwoot job/chatwoot-migrate -c init-db
+kubectl logs -n chatwoot job/chatwoot-migrate -c init-cache
+kubectl logs -n chatwoot job/chatwoot-migrate -c migrate
+```
+
+如果 `init-db` 卡住，必须用和 Chart 一致的身份检查 PgBouncer/CNPG：
+
+```bash
+kubectl run pg-ready-check -n chatwoot --rm -it --restart=Never \
+  --image=chatwoot/chatwoot:v4.13.0 -- \
+  pg_isready -h pg-pooler-rw.cnpg.svc.cluster.local -p 5432 -U chatwoot -d chatwoot -t 5
+```
+
+如果 `migrate` 报 `must be owner of table ...`，这不是 Chart 权限不足，而是数据库历史对象 owner 不一致。用数据库管理员账号确认所有权后再修复，避免只给 `GRANT` 导致迁移仍失败：
+
+```sql
+SELECT tablename, tableowner FROM pg_tables WHERE schemaname = 'public' ORDER BY tablename;
+ALTER SCHEMA public OWNER TO chatwoot;
+ALTER DATABASE chatwoot OWNER TO chatwoot;
+```
+
+对外部 Valkey/Redis，优先检查 TCP 可连通性，不只看 DNS 解析：
+
+```bash
+kubectl run cache-ready-check -n chatwoot --rm -it --restart=Never \
+  --image=chatwoot/chatwoot:v4.13.0 -- \
+  ruby -rsocket -rtimeout -e 'Timeout.timeout(5) { s = TCPSocket.new(ARGV[0], Integer(ARGV[1])); s.close }' \
+  valkey-rw.valkey.svc.cluster.local 6379
 ```
 
 ---
@@ -205,6 +248,7 @@ kubectl get pods -n chatwoot -o wide
 
 | 版本 | 关键变更 |
 |------|----------|
+| **v3.3.47** | 非破坏性优化：迁移 Hook 增加显式 `backoffLimit`、等待超时/间隔参数、可选 Job 生命周期字段和 Pod 注解；默认行为与 3.3.46 保持一致；补充迁移 Job 排障 runbook；测试扩展到 52 个用例 |
 | **v3.3.46** | 线上环境修复：迁移 Job 的 `init-db` 使用带 `-U/-d` 的 `pg_isready`，兼容 PgBouncer/CNPG 对用户名和数据库的要求；`init-cache` 改为 Redis/Valkey TCP 检查，避免只解析 DNS 造成误判；测试扩展到 51 个用例 |
 | **v3.3.45** | Rancher 升级兼容修复：默认 readinessProbe 改回轻量 `/health`，避免 `/api` 的 Redis/Postgres 深度检查拖慢或阻断升级；保留 `web.readinessProbe.path: /api` 作为显式依赖感知模式；测试扩展到 50 个用例 |
 | **v3.3.44** | Rancher 升级兼容修复：放宽 `storage.type` schema，允许旧 Values 中的历史存储类型通过校验，并按既有模板逻辑安全回退到本地存储；测试扩展到 49 个用例 |

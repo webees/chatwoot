@@ -99,6 +99,13 @@ serviceAccount: { create: true, annotations: {} }
 hooks:
   migrate:
     hookAnnotation: "post-install,post-upgrade"
+    # Kubernetes Job 默认重试 6 次；显式配置便于 Rancher UI 审计，不改变默认行为
+    backoffLimit: 6
+    # 外部 PgBouncer/CNPG 与 Valkey 偶发抖动时，可只调整等待节奏，不改模板
+    wait:
+      timeoutSeconds: 5
+      intervalSeconds: 2
+    podAnnotations: {}
     resources: {}
 existingEnvSecret: ""
 

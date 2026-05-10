@@ -179,6 +179,17 @@
           "type": "object",
           "properties": {
             "hookAnnotation": { "type": "string" },
+            "backoffLimit": { "type": "integer", "minimum": 0 },
+            "activeDeadlineSeconds": { "type": "integer", "minimum": 1 },
+            "ttlSecondsAfterFinished": { "type": "integer", "minimum": 0 },
+            "podAnnotations": { "type": "object" },
+            "wait": {
+              "type": "object",
+              "properties": {
+                "timeoutSeconds": { "type": "integer", "minimum": 1 },
+                "intervalSeconds": { "type": "integer", "minimum": 1 }
+              }
+            },
             "resources": { "type": "object" }
           }
         }

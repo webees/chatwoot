@@ -1,4 +1,13 @@
 {{/* --- [ 数据库自动迁移任务 ] --- */}}
+{{- $hooks := default dict .Values.hooks -}}
+{{- $migrate := default dict $hooks.migrate -}}
+{{- $migrateWait := default dict $migrate.wait -}}
+{{- $waitTimeoutSeconds := default 5 $migrateWait.timeoutSeconds -}}
+{{- $waitIntervalSeconds := default 2 $migrateWait.intervalSeconds -}}
+{{- $backoffLimit := 6 -}}
+{{- if hasKey $migrate "backoffLimit" -}}
+{{- $backoffLimit = $migrate.backoffLimit -}}
+{{- end -}}
 apiVersion: batch/v1
 kind: Job
 metadata:
@@ -6,11 +15,23 @@ metadata:
   labels:
     {{- include "chatwoot.labels" . | nindent 4 }}
   annotations:
-    "helm.sh/hook": {{ .Values.hooks.migrate.hookAnnotation | quote }}
+    "helm.sh/hook": {{ default "post-install,post-upgrade" $migrate.hookAnnotation | quote }}
     "helm.sh/hook-delete-policy": "hook-succeeded,before-hook-creation"
     "helm.sh/hook-weight": "-1"
 spec:
+  backoffLimit: {{ $backoffLimit }}
+  {{- if hasKey $migrate "activeDeadlineSeconds" }}
+  activeDeadlineSeconds: {{ $migrate.activeDeadlineSeconds }}
+  {{- end }}
+  {{- if hasKey $migrate "ttlSecondsAfterFinished" }}
+  ttlSecondsAfterFinished: {{ $migrate.ttlSecondsAfterFinished }}
+  {{- end }}
   template:
+    {{- with $migrate.podAnnotations }}
+    metadata:
+      annotations:
+        {{- toYaml . | nindent 8 }}
+    {{- end }}
     spec:
       {{- include "chatwoot.pod.common" . | nindent 6 }}
       restartPolicy: Never
@@ -27,10 +48,10 @@ spec:
               -p {{ include "chatwoot.db.port" . | quote }}
               -U {{ include "chatwoot.db.username" . | quote }}
               -d {{ include "chatwoot.db.database" . | quote }}
-              -t 5;
+              -t {{ $waitTimeoutSeconds }};
               do
                 echo "正在等待数据库 {{ include "chatwoot.db.host" . }}:{{ include "chatwoot.db.port" . }}";
-                sleep 2;
+                sleep {{ $waitIntervalSeconds }};
               done;
               echo "数据库已准备就绪，可以接收连接。" ;
         - name: init-cache
@@ -41,12 +62,13 @@ spec:
             - -c
             - >-
               until ruby -rsocket -rtimeout -e
-              'Timeout.timeout(5) { socket = TCPSocket.new(ARGV[0], Integer(ARGV[1])); socket.close }'
+              'Timeout.timeout(Integer(ARGV[2])) { socket = TCPSocket.new(ARGV[0], Integer(ARGV[1])); socket.close }'
               {{ include "chatwoot.cache.host" . | quote }}
-              {{ include "chatwoot.cache.port" . | quote }};
+              {{ include "chatwoot.cache.port" . | quote }}
+              {{ $waitTimeoutSeconds | quote }};
               do
                 echo "正在等待缓存 {{ include "chatwoot.cache.host" . }}:{{ include "chatwoot.cache.port" . }}";
-                sleep 2;
+                sleep {{ $waitIntervalSeconds }};
               done;
               echo "缓存已准备就绪，可以接收连接。" ;
       containers:
@@ -65,9 +87,9 @@ spec:
           volumeMounts:
             - name: cache
               mountPath: /app/tmp
-          {{- if .Values.hooks.migrate.resources }}
+          {{- if $migrate.resources }}
           resources:
-            {{- toYaml .Values.hooks.migrate.resources | nindent 12 }}
+            {{- toYaml $migrate.resources | nindent 12 }}
           {{- else if .Values.postgresql.resources }}
           resources:
             {{- toYaml .Values.postgresql.resources | nindent 12 }}
