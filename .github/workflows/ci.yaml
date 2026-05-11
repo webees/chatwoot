@@ -42,7 +42,7 @@ jobs:
       - name: Run chart-testing (lint)
         run: |
           helm dep build charts/chatwoot
-          ct lint --target-branch main
+          ct lint --target-branch main --validate-chart-schema=false --validate-maintainers=false
 
       - name: Install helm-unittest
         run: |

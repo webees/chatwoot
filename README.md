@@ -1,6 +1,6 @@
 # ⚛️ Chatwoot Helm Chart — 极客进化版
 
-> **Chatwoot v4.13.0** · Chart v3.3.51 · 严苛 CI/CD · 零停机升级 · 模块化安全治理
+> **Chatwoot v4.13.0** · Chart v3.3.52 · 严苛 CI/CD · 零停机升级 · 模块化安全治理
 
 本项目是 [chatwoot/charts](https://github.com/chatwoot/charts) 的**生产级深度定制分支**，基于 `3.3.38` 的 Rancher 兼容加固架构进行安全升级，保留其有价值的增强，摒弃臃肿与安全短板。
 
