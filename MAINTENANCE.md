@@ -153,7 +153,7 @@ helm upgrade chatwoot ./charts/chatwoot \
 2. 超时时间设为 `600` 秒以上
 3. 保持 `fullnameOverride: "chatwoot"`，不要在升级时修改 Release 名、Service 名、PVC 名或 selector 相关配置
 4. 使用 Rancher Values 或 `values.override.yaml` 管理 `SECRET_KEY_BASE`、`POSTGRES_PASSWORD` 等敏感配置，避免提交到仓库
-5. 从 `3.3.38` 升级到 `3.3.53` 的预期变更仅限镜像版本、Web readiness 默认改回轻量 `/health`、探针参数渲染顺序、迁移 Job 的 PgBouncer/CNPG 与 Redis/Valkey 等待逻辑、CI 维护、镜像仓库说明，以及兼容性配置能力增强；Deployment selector、Service、Secret、PVC 名称必须保持不变
+5. 从 `3.3.38` 升级到 `3.3.54` 的预期变更仅限镜像版本、Web readiness 默认改回轻量 `/health`、探针参数渲染顺序、迁移 Job 的 PgBouncer/CNPG 与 Redis/Valkey 等待逻辑、CI 维护、镜像仓库说明，以及兼容性配置能力增强；Deployment selector、Service、Secret、PVC 名称必须保持不变
 
 ### 推荐升级路径
 
@@ -163,13 +163,13 @@ helm upgrade chatwoot ./charts/chatwoot \
 4. 等待迁移 Job 完成，再观察 Web readiness
 5. 如升级失败，使用 Rancher/Helm rollback 回到上一 revision，不手工删除 PVC 或 Secret
 
-### 镜像仓库与 GHCR 检查
+### 官方镜像与仓库覆盖检查
 
-如果生产环境通过 GHCR 或 registry mirror 拉取 Chatwoot 镜像，必须在 Rancher Values 中显式保留镜像仓库配置，避免升级时回落到 Chart 默认镜像引用。
+Chatwoot 官方镜像使用 `chatwoot/chatwoot:v4.13.0`。不要把 `ghcr.io/chatwoot/chatwoot` 当成官方镜像源；如果生产环境使用私有仓库、缓存仓库或 registry mirror，必须在 Rancher Values 中显式保留对应镜像仓库配置，避免升级时回落到 Chart 默认镜像引用。
 
 ```yaml
 image:
-  repository: ghcr.io/<org>/<image>
+  repository: chatwoot/chatwoot # 官方默认镜像；私有仓库可改为 registry.example.com/chatwoot
   tag: v4.13.0
   pullPolicy: IfNotPresent
 ```
@@ -181,14 +181,14 @@ helm get values chatwoot -n chatwoot -o yaml | yq '.image'
 kubectl get deploy chatwoot-web chatwoot-worker -n chatwoot -o yaml | grep -n 'image:'
 ```
 
-如果 Kubernetes event 显示拉取失败，不要只按域名下结论；先确认该节点的 containerd registry mirror 是否生效，以及失败发生在原始镜像引用还是镜像仓库代理通道。
+如果 Kubernetes event 显示拉取失败，先确认 Deployment 实际渲染出的 `image:`，再检查该节点到官方仓库或内部 registry mirror 的连通性。
 
 ### 线上验证记录：v3.3.47
 
 - 验证时间：`2026-05-11 22:30`（Asia/Bangkok）
 - 集群入口：`100.100.255.255`，namespace `chatwoot`
 - 升级包：`chatwoot-3.3.47.tgz`，SHA256 `88279f7151f5812adb1693ff0b8b1f778dd3e26a2a65037bee2d570febbfb158`
-- `revision 16` 首次升级失败原因：`wk-th-colo-01` 拉取当时渲染出的镜像引用 `chatwoot/chatwoot:v4.13.0` 超时/拒绝连接。若生产环境实际通过 GHCR 或 registry mirror 拉取镜像，应将问题归类为该节点到镜像仓库/镜像代理通道异常，不是迁移 Hook 或模板渲染错误
+- `revision 16` 首次升级失败原因：`wk-th-colo-01` 拉取当时渲染出的官方镜像引用 `chatwoot/chatwoot:v4.13.0` 超时/拒绝连接，应归类为该节点到官方仓库或内部 registry mirror 通道异常，不是迁移 Hook 或模板渲染错误
 - `revision 17` 使用同一份线上 Values，并显式保持原有规模 `web.replicaCount=1`、`worker.replicaCount=1` 后升级成功
 - 最终状态：`STATUS: deployed`，Chart `chatwoot-3.3.47`，App `v4.13.0`
 - Pod 状态：`chatwoot-web 1/1 Running`、`chatwoot-worker 1/1 Running`
@@ -196,7 +196,7 @@ kubectl get deploy chatwoot-web chatwoot-worker -n chatwoot -o yaml | grep -n 'i
 - 迁移 Job：Hook 成功后已按策略删除，namespace 中无残留 Job
 - 最近 Web/Worker 日志未发现 `FATAL`、`ERROR`、`Rack::Timeout` 或 `Internal Server Error`
 
-> 兼容性结论：Rancher 线上环境如果历史上手动缩放到 1 副本，后续升级必须在 Values 中显式保留 `web.replicaCount: 1`、`worker.replicaCount: 1` 和生产使用的 `image.repository`，避免 Chart 默认值触发额外 Pod 或错误镜像仓库拉取。
+> 兼容性结论：Rancher 线上环境如果历史上手动缩放到 1 副本，后续升级必须在 Values 中显式保留 `web.replicaCount: 1`、`worker.replicaCount: 1`；如果使用私有镜像仓库，也必须保留对应 `image.repository`，避免 Chart 默认值触发额外 Pod 或错误镜像仓库拉取。
 
 ### 部署前置条件
 ```bash
@@ -283,10 +283,9 @@ kubectl get pods -n chatwoot -o wide
 
 | 版本 | 关键变更 |
 |------|----------|
-| **v3.3.53** | CI 修复：手动 `ct lint` 显式关闭缺省 YAML lint 配置查找，避免缺少 `lintconf.yaml` 时失败；主校验仍由 `helm lint` 和 `helm unittest` 承担；测试基线维持 59 个用例 |
-| **v3.3.52** | CI 修复：手动安装 `ct v3.14.0` 后显式关闭缺省 `chart_schema.yaml` 和 maintainer 账号校验，保留 Helm lint 与 helm-unittest 主验证路径；测试基线维持 59 个用例 |
-| **v3.3.51** | CI 日志优化：移除 `helm/chart-testing-action` 对 `setup-uv` cache 的隐式依赖，改为直接安装 `ct v3.14.0` 二进制，消除无 Python 依赖文件时的 cache annotation；测试基线维持 59 个用例 |
-| **v3.3.50** | 文档修正：将线上拉镜像失败归类为镜像仓库/GHCR/registry mirror 通道问题，避免误写死为 Docker Hub；新增 GHCR 镜像仓库覆盖验证说明；补充 GHCR repository override 测试，测试扩展到 59 个用例 |
+| **v3.3.54** | 文档修正：确认官方镜像源为 `chatwoot/chatwoot`，移除将 GHCR 写成官方镜像源的误导表述；镜像覆盖测试改为通用私有仓库示例；测试基线维持 59 个用例 |
+| **v3.3.53** | CI 修复：手动安装 `ct v3.14.0` 并显式关闭缺省 `chart_schema.yaml`、`lintconf.yaml` 和 maintainer 配置查找，消除 `setup-uv` cache annotation；主校验仍由 `helm lint` 和 `helm unittest` 承担；测试基线维持 59 个用例 |
+| **v3.3.50** | 文档修正：将线上拉镜像失败从固定 Docker Hub 归因调整为镜像仓库或 registry mirror 通道问题；新增镜像仓库覆盖说明和 repository override 测试，测试扩展到 59 个用例 |
 | **v3.3.49** | CI 日志优化：移除冗余 `actions/setup-python`，依赖 `helm/chart-testing-action@v2.8.0` 内置的 `uv` 安装链，避免无 Python 依赖文件时产生缓存 annotation；保持 Node 24 兼容 Actions；测试基线维持 58 个用例 |
 | **v3.3.48** | 维护优化：升级 GitHub Actions 到 Node 24 兼容版本并启用 Node 24 opt-in；新增脱敏 Rancher 生产 Values 兼容测试，覆盖副本数、旧 `s3_compatible` 存储值、外部 CNPG/Valkey、readiness 和双域名 Ingress；测试扩展到 58 个用例 |
 | **v3.3.47** | 非破坏性优化：迁移 Hook 增加显式 `backoffLimit`、等待超时/间隔参数、可选 Job 生命周期字段和 Pod 注解；默认行为与 3.3.46 保持一致；补充迁移 Job 排障 runbook；测试扩展到 52 个用例 |

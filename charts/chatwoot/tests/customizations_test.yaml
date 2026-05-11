@@ -115,17 +115,17 @@ tests:
           path: spec.template.spec.containers[0].image
           value: chatwoot/chatwoot:v4.13.0
 
-  - it: should allow GHCR image repository overrides
+  - it: should allow custom image repository overrides
     set:
       image:
-        repository: ghcr.io/example/chatwoot
+        repository: registry.example.com/chatwoot
         tag: v4.13.0
     template: web.yaml
     documentIndex: 0
     asserts:
       - equal:
           path: spec.template.spec.containers[0].image
-          value: ghcr.io/example/chatwoot:v4.13.0
+          value: registry.example.com/chatwoot:v4.13.0
 
   - it: should have worker replicas in production
     set:
