@@ -1,0 +1,56 @@
+# 脱敏后的线上 Rancher values 形状，用于保护升级兼容性。
+# 不要在这里写入真实密码、token、access key 或 secret key。
+env:
+  ACTIVE_STORAGE_SERVICE: s3_compatible
+  FRONTEND_URL: https://help.apib.net
+  POSTGRES_PASSWORD: redacted-postgres-password
+  REDIS_URL: redis://:redacted-redis-password@valkey-rw.valkey.svc.cluster.local:6379/1
+  SECRET_KEY_BASE: redacted-secret-key-base-for-template-tests-only
+  STORAGE_ACCESS_KEY_ID: redacted-access-key
+  STORAGE_BUCKET_NAME: chatwoot
+  STORAGE_ENDPOINT: https://s3.apib.net
+  STORAGE_FORCE_PATH_STYLE: "true"
+  STORAGE_REGION: us-east-1
+  STORAGE_SECRET_ACCESS_KEY: redacted-secret-access-key
+
+global:
+  cattle:
+    clusterId: local
+    clusterName: local
+    rkePathPrefix: ""
+    rkeWindowsPathPrefix: ""
+    systemProjectId: p-redacted
+    url: https://k3s.run
+
+ingress:
+  hosts:
+    - host: help.apib.net
+      paths:
+        - path: /
+          pathType: Prefix
+    - host: chat.bxx.cc
+      paths:
+        - path: /
+          pathType: Prefix
+
+postgresql:
+  enabled: false
+  postgresqlHost: pg-pooler-rw.cnpg.svc.cluster.local
+  postgresqlPort: "5432"
+  auth:
+    username: chatwoot
+    database: chatwoot
+
+redis:
+  enabled: false
+  host: valkey-rw.valkey.svc.cluster.local
+  port: "6379"
+
+storage:
+  type: s3_compatible
+
+web:
+  replicaCount: 1
+
+worker:
+  replicaCount: 1

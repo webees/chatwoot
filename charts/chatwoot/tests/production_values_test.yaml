@@ -1,0 +1,65 @@
+suite: test Rancher production values compatibility
+templates:
+  - web.yaml
+  - worker.yaml
+  - job.migrate.yaml
+  - ingress.yaml
+values:
+  - ./fixtures/rancher-production-values.yaml
+release:
+  name: chatwoot
+  namespace: chatwoot
+tests:
+  - it: should preserve the online web replica count
+    template: web.yaml
+    documentIndex: 0
+    asserts:
+      - equal:
+          path: spec.replicas
+          value: 1
+
+  - it: should preserve the online worker replica count
+    template: worker.yaml
+    asserts:
+      - equal:
+          path: spec.replicas
+          value: 1
+
+  - it: should accept legacy s3 compatible storage while falling back to local direct env
+    template: web.yaml
+    documentIndex: 0
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].env[0].name
+          value: ACTIVE_STORAGE_SERVICE
+      - equal:
+          path: spec.template.spec.containers[0].env[0].value
+          value: local
+
+  - it: should keep lightweight readiness for Rancher upgrades
+    template: web.yaml
+    documentIndex: 0
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].readinessProbe.httpGet.path
+          value: /health
+
+  - it: should target external CNPG and Valkey endpoints in migrate checks
+    template: job.migrate.yaml
+    asserts:
+      - matchRegex:
+          path: spec.template.spec.initContainers[0].args[1]
+          pattern: "pg_isready -h \"pg-pooler-rw.cnpg.svc.cluster.local\" -p \"5432\" -U \"chatwoot\" -d \"chatwoot\""
+      - matchRegex:
+          path: spec.template.spec.initContainers[1].args[1]
+          pattern: "\"valkey-rw.valkey.svc.cluster.local\" \"6379\" \"5\""
+
+  - it: should keep both production ingress hosts
+    template: ingress.yaml
+    asserts:
+      - equal:
+          path: spec.rules[0].host
+          value: help.apib.net
+      - equal:
+          path: spec.rules[1].host
+          value: chat.bxx.cc
