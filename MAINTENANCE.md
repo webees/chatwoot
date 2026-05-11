@@ -135,7 +135,7 @@ helm unittest charts/chatwoot
 rg -n "name: chatwoot-web|name: chatwoot-worker|name: chatwoot-storage|name: chatwoot-env|path: /health|pg_isready|TCPSocket.new" /tmp/chatwoot-template.yaml
 ```
 
-当前测试基线：`12` 个 test suites，`59` 个用例。新增模板能力必须补充 helm-unittest，尤其是 selector、Service、Secret、PVC、probe、hook、镜像仓库覆盖、外部 Secret 和脱敏后的 Rancher 生产 Values。
+当前测试基线：`12` 个 test suites，`62` 个用例。新增模板能力必须补充 helm-unittest，尤其是 selector、Service、Secret、PVC、probe、hook、镜像仓库覆盖、外部 Secret 和脱敏后的 Rancher 生产 Values。
 
 ---
 
@@ -153,7 +153,7 @@ helm upgrade chatwoot ./charts/chatwoot \
 2. 超时时间设为 `600` 秒以上
 3. 保持 `fullnameOverride: "chatwoot"`，不要在升级时修改 Release 名、Service 名、PVC 名或 selector 相关配置
 4. 使用 Rancher Values 或 `values.override.yaml` 管理 `SECRET_KEY_BASE`、`POSTGRES_PASSWORD` 等敏感配置，避免提交到仓库
-5. 从 `3.3.38` 升级到 `3.3.54` 的预期变更仅限镜像版本、Web readiness 默认改回轻量 `/health`、探针参数渲染顺序、迁移 Job 的 PgBouncer/CNPG 与 Redis/Valkey 等待逻辑、CI 维护、镜像仓库说明，以及兼容性配置能力增强；Deployment selector、Service、Secret、PVC 名称必须保持不变
+5. 从 `3.3.38` 升级到 `3.3.55` 的预期变更仅限镜像版本、Web readiness 默认改回轻量 `/health`、探针参数渲染顺序、迁移 Job 的 PgBouncer/CNPG 与 Redis/Valkey 等待逻辑、迁移 Job 镜像缓存调度偏好、旧存储服务名保留、CI 维护、镜像仓库说明，以及兼容性配置能力增强；Deployment selector、Service、Secret、PVC 名称必须保持不变
 
 ### 推荐升级路径
 
@@ -182,6 +182,25 @@ kubectl get deploy chatwoot-web chatwoot-worker -n chatwoot -o yaml | grep -n 'i
 ```
 
 如果 Kubernetes event 显示拉取失败，先确认 Deployment 实际渲染出的 `image:`，再检查该节点到官方仓库或内部 registry mirror 的连通性。
+
+迁移 Job 默认启用 `hooks.migrate.preferExistingPods: true`，会软亲和到已有 `chatwoot-web` / `chatwoot-worker` 所在节点，优先复用节点上的 `chatwoot/chatwoot:v4.13.0` 缓存镜像。这个设置不改变节点硬约束，也不会强制绑定节点；如果生产环境已经通过自定义 affinity 完全接管调度，可显式关闭：
+
+```yaml
+hooks:
+  migrate:
+    preferExistingPods: false
+```
+
+### 存储服务名兼容
+
+Chatwoot v4.13.0 的 `config/storage.yml` 使用 `local`、`amazon`、`google`、`microsoft`、`s3_compatible` 等服务名。Chart 继续兼容旧的 Rancher Values：
+
+- `storage.type: local` 渲染为 `ACTIVE_STORAGE_SERVICE=local`
+- `storage.type: s3` 渲染为 `ACTIVE_STORAGE_SERVICE=amazon`，并继续使用 `storage.s3.*` 生成 AWS S3 环境变量
+- `storage.type: gcs` 渲染为 `ACTIVE_STORAGE_SERVICE=google`
+- 如果历史 Values 已显式设置 `env.ACTIVE_STORAGE_SERVICE`，以该值为准，例如线上 `s3_compatible`
+
+这可以避免旧 `s3_compatible` 配置在升级时被 Chart 的直接环境变量覆盖成 `local`。
 
 ### 线上验证记录：v3.3.47
 
@@ -283,6 +302,7 @@ kubectl get pods -n chatwoot -o wide
 
 | 版本 | 关键变更 |
 |------|----------|
+| **v3.3.55** | Rancher 修复：迁移 Hook 默认软亲和到已有 Web/Worker Pod 所在节点，复用已缓存 `chatwoot/chatwoot:v4.13.0` 镜像，降低 Docker Hub 抖动导致的 `Init:ImagePullBackOff`；保留线上旧 `ACTIVE_STORAGE_SERVICE=s3_compatible`，并将 `storage.type=s3` 映射到 Chatwoot v4.13 的 `amazon` 服务名；测试扩展到 62 个用例 |
 | **v3.3.54** | 文档修正：确认官方镜像源为 `chatwoot/chatwoot`，移除将 GHCR 写成官方镜像源的误导表述；镜像覆盖测试改为通用私有仓库示例；测试基线维持 59 个用例 |
 | **v3.3.53** | CI 修复：手动安装 `ct v3.14.0` 并显式关闭缺省 `chart_schema.yaml`、`lintconf.yaml` 和 maintainer 配置查找，消除 `setup-uv` cache annotation；主校验仍由 `helm lint` 和 `helm unittest` 承担；测试基线维持 59 个用例 |
 | **v3.3.50** | 文档修正：将线上拉镜像失败从固定 Docker Hub 归因调整为镜像仓库或 registry mirror 通道问题；新增镜像仓库覆盖说明和 repository override 测试，测试扩展到 59 个用例 |

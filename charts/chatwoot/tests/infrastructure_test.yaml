@@ -124,6 +124,31 @@ tests:
           path: spec.template.spec.initContainers[1].args[1]
           pattern: "TCPSocket.new\\(ARGV\\[0\\], Integer\\(ARGV\\[1\\]\\)\\).*\"valkey-rw.valkey.svc.cluster.local\" \"6379\" \"5\""
 
+  - it: should prefer existing app pod nodes for migrate hook image cache reuse
+    template: job.migrate.yaml
+    asserts:
+      - equal:
+          path: spec.template.spec.affinity.podAffinity.preferredDuringSchedulingIgnoredDuringExecution[0].weight
+          value: 80
+      - equal:
+          path: spec.template.spec.affinity.podAffinity.preferredDuringSchedulingIgnoredDuringExecution[0].podAffinityTerm.topologyKey
+          value: kubernetes.io/hostname
+      - equal:
+          path: spec.template.spec.affinity.podAffinity.preferredDuringSchedulingIgnoredDuringExecution[0].podAffinityTerm.labelSelector.matchExpressions[2].values
+          value:
+            - web
+            - worker
+
+  - it: should allow migrate hook image cache preference to be disabled
+    template: job.migrate.yaml
+    set:
+      hooks:
+        migrate:
+          preferExistingPods: false
+    asserts:
+      - notExists:
+          path: spec.template.spec.affinity.podAffinity
+
   - it: should allow probe timings to be customized without changing paths
     template: web.yaml
     set:

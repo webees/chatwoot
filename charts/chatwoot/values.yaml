@@ -17,7 +17,7 @@ vpa:
 
 # --- [ 3. 智能存储引擎 (v3.2 New!) ] ---
 storage:
-  type: local # local | s3 | gcs
+  type: local # local | s3 | gcs；旧 Rancher Values 可保留 s3_compatible 等 Chatwoot 服务名
   s3: { bucket: "", region: "", accessKeyId: "", secretAccessKey: "" }
   gcs: { bucket: "", project: "" }
 
@@ -99,6 +99,8 @@ serviceAccount: { create: true, annotations: {} }
 hooks:
   migrate:
     hookAnnotation: "post-install,post-upgrade"
+    # 优先把迁移 Job 调度到已有 Web/Worker Pod 所在节点，尽量复用已缓存镜像，降低 Rancher 升级时因 Docker Hub 抖动导致的 hook 失败概率
+    preferExistingPods: true
     # Kubernetes Job 默认重试 6 次；显式配置便于 Rancher UI 审计，不改变默认行为
     backoffLimit: 6
     # 外部 PgBouncer/CNPG 与 Valkey 偶发抖动时，可只调整等待节奏，不改模板

@@ -35,9 +35,21 @@
 存储配置生成器 (Geek Edition)
 */}}
 {{- define "chatwoot.storage.env" -}}
-{{- if eq .Values.storage.type "s3" -}}
+{{- $storageType := default "local" .Values.storage.type -}}
+{{- $explicitService := default "" .Values.env.ACTIVE_STORAGE_SERVICE -}}
+{{- $activeStorageService := "local" -}}
+{{- if and $explicitService (or (eq $storageType "local") (ne $explicitService "local")) -}}
+{{- $activeStorageService = $explicitService -}}
+{{- else if eq $storageType "s3" -}}
+{{- $activeStorageService = "amazon" -}}
+{{- else if eq $storageType "gcs" -}}
+{{- $activeStorageService = "google" -}}
+{{- else if or (eq $storageType "local") (eq $storageType "amazon") (eq $storageType "google") (eq $storageType "microsoft") (eq $storageType "s3_compatible") -}}
+{{- $activeStorageService = $storageType -}}
+{{- end -}}
 - name: ACTIVE_STORAGE_SERVICE
-  value: "s3"
+  value: {{ $activeStorageService | quote }}
+{{- if eq $storageType "s3" }}
 - name: S3_BUCKET_NAME
   value: {{ .Values.storage.s3.bucket | quote }}
 - name: S3_REGION
@@ -46,16 +58,11 @@
   value: {{ .Values.storage.s3.accessKeyId | quote }}
 - name: S3_SECRET_ACCESS_KEY
   value: {{ .Values.storage.s3.secretAccessKey | quote }}
-{{- else if eq .Values.storage.type "gcs" -}}
-- name: ACTIVE_STORAGE_SERVICE
-  value: "google"
+{{- else if eq $storageType "gcs" }}
 - name: GCS_BUCKET
   value: {{ .Values.storage.gcs.bucket | quote }}
 - name: GCS_PROJECT
   value: {{ .Values.storage.gcs.project | quote }}
-{{- else -}}
-- name: ACTIVE_STORAGE_SERVICE
-  value: "local"
 {{- end -}}
 {{- end -}}
 
@@ -111,23 +118,35 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 
 {{/* 核心规范块 (Pod) */}}
 {{- define "chatwoot.pod.common" -}}
-{{- with .Values.imagePullSecrets }}
+{{- $root := . -}}
+{{- $component := "" -}}
+{{- if and (kindIs "map" .) (hasKey . "root") -}}
+{{- $root = .root -}}
+{{- $component = default "" .component -}}
+{{- end -}}
+{{- $hooks := default dict $root.Values.hooks -}}
+{{- $migrate := default dict $hooks.migrate -}}
+{{- $preferExistingPods := true -}}
+{{- if hasKey $migrate "preferExistingPods" -}}
+{{- $preferExistingPods = $migrate.preferExistingPods -}}
+{{- end -}}
+{{- with $root.Values.imagePullSecrets }}
 imagePullSecrets:
   {{- toYaml . | nindent 2 }}
 {{- end }}
-{{- with .Values.nodeSelector }}
+{{- with $root.Values.nodeSelector }}
 nodeSelector:
   {{- toYaml . | nindent 2 }}
 {{- end }}
-{{- with .Values.tolerations }}
+{{- with $root.Values.tolerations }}
 tolerations:
   {{- toYaml . | nindent 2 }}
 {{- end }}
 affinity:
-  {{- if .Values.affinity }}
-  {{- toYaml .Values.affinity | nindent 2 }}
-  {{- else if .Values.global.affinity }}
-  {{- toYaml .Values.global.affinity | nindent 2 }}
+  {{- if $root.Values.affinity }}
+  {{- toYaml $root.Values.affinity | nindent 2 }}
+  {{- else if $root.Values.global.affinity }}
+  {{- toYaml $root.Values.global.affinity | nindent 2 }}
   {{- else }}
   nodeAffinity:
     requiredDuringSchedulingIgnoredDuringExecution:
@@ -137,17 +156,39 @@ affinity:
               operator: Exists
             - key: longhorn
               operator: Exists
+  {{- if and (eq $component "migrate") $preferExistingPods }}
+  podAffinity:
+    preferredDuringSchedulingIgnoredDuringExecution:
+      - weight: 80
+        podAffinityTerm:
+          labelSelector:
+            matchExpressions:
+              - key: app.kubernetes.io/name
+                operator: In
+                values:
+                  - {{ include "chatwoot.name" $root | quote }}
+              - key: app.kubernetes.io/instance
+                operator: In
+                values:
+                  - {{ $root.Release.Name | quote }}
+              - key: role
+                operator: In
+                values:
+                  - "web"
+                  - "worker"
+          topologyKey: kubernetes.io/hostname
   {{- end }}
-serviceAccountName: {{ include "chatwoot.serviceAccountName" . }}
+  {{- end }}
+serviceAccountName: {{ include "chatwoot.serviceAccountName" $root }}
 volumes:
   - name: cache
     emptyDir:
-      {{- if eq (default "" .Values.redis.master.persistence.medium) "Memory" }}
+      {{- if eq (default "" $root.Values.redis.master.persistence.medium) "Memory" }}
       medium: Memory
       {{- else }}
       {}
       {{- end }}
-  {{- if .Values.persistence.enabled }}
+  {{- if $root.Values.persistence.enabled }}
   - name: storage
     persistentVolumeClaim:
       claimName: chatwoot-storage

@@ -58,7 +58,7 @@
         "type": {
           "type": "string",
           "minLength": 1,
-          "description": "Recognized values are local, s3, and gcs. Unknown legacy values are accepted for Rancher upgrade compatibility and render as local storage."
+          "description": "Recognized chart shortcuts are local, s3, and gcs. Chatwoot service names such as s3_compatible are accepted for Rancher upgrade compatibility, and env.ACTIVE_STORAGE_SERVICE takes precedence when set."
         },
         "s3": {
           "type": "object",
@@ -179,6 +179,7 @@
           "type": "object",
           "properties": {
             "hookAnnotation": { "type": "string" },
+            "preferExistingPods": { "type": "boolean" },
             "backoffLimit": { "type": "integer", "minimum": 0 },
             "activeDeadlineSeconds": { "type": "integer", "minimum": 1 },
             "ttlSecondsAfterFinished": { "type": "integer", "minimum": 0 },

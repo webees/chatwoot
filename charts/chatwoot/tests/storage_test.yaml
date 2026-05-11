@@ -18,7 +18,7 @@ tests:
     asserts:
       - contains:
           path: spec.template.spec.containers[0].env
-          content: { name: ACTIVE_STORAGE_SERVICE, value: "s3" }
+          content: { name: ACTIVE_STORAGE_SERVICE, value: "amazon" }
       - contains:
           path: spec.template.spec.containers[0].env
           content: { name: S3_BUCKET_NAME, value: "my-bucket" }
@@ -62,6 +62,18 @@ tests:
       - contains:
           path: spec.template.spec.containers[0].env
           content: { name: ACTIVE_STORAGE_SERVICE, value: "local" }
+
+  - it: should preserve explicit legacy active storage service names
+    set:
+      storage: { type: s3_compatible }
+      env:
+        ACTIVE_STORAGE_SERVICE: s3_compatible
+    template: web.yaml
+    documentIndex: 0
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content: { name: ACTIVE_STORAGE_SERVICE, value: "s3_compatible" }
 
   - it: should preserve PVC name for Rancher upgrades
     set:
