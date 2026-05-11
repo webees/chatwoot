@@ -31,7 +31,13 @@ jobs:
           helm repo add bitnami "https://charts.bitnami.com/bitnami"
 
       - name: Set up chart-testing
-        uses: helm/chart-testing-action@v2.8.0
+        env:
+          CT_VERSION: 3.14.0
+        run: |
+          curl -sSL -o /tmp/chart-testing.tar.gz "https://github.com/helm/chart-testing/releases/download/v${CT_VERSION}/chart-testing_${CT_VERSION}_linux_amd64.tar.gz"
+          tar -xzf /tmp/chart-testing.tar.gz -C /tmp
+          sudo install /tmp/ct /usr/local/bin/ct
+          ct version
 
       - name: Run chart-testing (lint)
         run: |

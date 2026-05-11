@@ -153,7 +153,7 @@ helm upgrade chatwoot ./charts/chatwoot \
 2. 超时时间设为 `600` 秒以上
 3. 保持 `fullnameOverride: "chatwoot"`，不要在升级时修改 Release 名、Service 名、PVC 名或 selector 相关配置
 4. 使用 Rancher Values 或 `values.override.yaml` 管理 `SECRET_KEY_BASE`、`POSTGRES_PASSWORD` 等敏感配置，避免提交到仓库
-5. 从 `3.3.38` 升级到 `3.3.50` 的预期变更仅限镜像版本、Web readiness 默认改回轻量 `/health`、探针参数渲染顺序、迁移 Job 的 PgBouncer/CNPG 与 Redis/Valkey 等待逻辑、CI 维护、镜像仓库说明，以及兼容性配置能力增强；Deployment selector、Service、Secret、PVC 名称必须保持不变
+5. 从 `3.3.38` 升级到 `3.3.51` 的预期变更仅限镜像版本、Web readiness 默认改回轻量 `/health`、探针参数渲染顺序、迁移 Job 的 PgBouncer/CNPG 与 Redis/Valkey 等待逻辑、CI 维护、镜像仓库说明，以及兼容性配置能力增强；Deployment selector、Service、Secret、PVC 名称必须保持不变
 
 ### 推荐升级路径
 
@@ -283,6 +283,7 @@ kubectl get pods -n chatwoot -o wide
 
 | 版本 | 关键变更 |
 |------|----------|
+| **v3.3.51** | CI 日志优化：移除 `helm/chart-testing-action` 对 `setup-uv` cache 的隐式依赖，改为直接安装 `ct v3.14.0` 二进制，消除无 Python 依赖文件时的 cache annotation；测试基线维持 59 个用例 |
 | **v3.3.50** | 文档修正：将线上拉镜像失败归类为镜像仓库/GHCR/registry mirror 通道问题，避免误写死为 Docker Hub；新增 GHCR 镜像仓库覆盖验证说明；补充 GHCR repository override 测试，测试扩展到 59 个用例 |
 | **v3.3.49** | CI 日志优化：移除冗余 `actions/setup-python`，依赖 `helm/chart-testing-action@v2.8.0` 内置的 `uv` 安装链，避免无 Python 依赖文件时产生缓存 annotation；保持 Node 24 兼容 Actions；测试基线维持 58 个用例 |
 | **v3.3.48** | 维护优化：升级 GitHub Actions 到 Node 24 兼容版本并启用 Node 24 opt-in；新增脱敏 Rancher 生产 Values 兼容测试，覆盖副本数、旧 `s3_compatible` 存储值、外部 CNPG/Valkey、readiness 和双域名 Ingress；测试扩展到 58 个用例 |
