@@ -50,3 +50,30 @@ tests:
       - equal:
           path: spec.template.spec.affinity.nodeAffinity.requiredDuringSchedulingIgnoredDuringExecution.nodeSelectorTerms[0].matchExpressions[0].key
           value: "worker"
+
+  - it: should prefer existing web pod nodes during rolling upgrades
+    template: web.yaml
+    documentIndex: 0
+    asserts:
+      - equal:
+          path: spec.template.spec.affinity.podAffinity.preferredDuringSchedulingIgnoredDuringExecution[0].podAffinityTerm.labelSelector.matchExpressions[2].values
+          value:
+            - web
+
+  - it: should prefer existing worker pod nodes during rolling upgrades
+    template: worker.yaml
+    asserts:
+      - equal:
+          path: spec.template.spec.affinity.podAffinity.preferredDuringSchedulingIgnoredDuringExecution[0].podAffinityTerm.labelSelector.matchExpressions[2].values
+          value:
+            - worker
+
+  - it: should allow image cache scheduling preference to be disabled globally
+    set:
+      scheduling:
+        preferExistingPods: false
+    template: web.yaml
+    documentIndex: 0
+    asserts:
+      - notExists:
+          path: spec.template.spec.affinity.podAffinity

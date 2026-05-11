@@ -35,21 +35,9 @@
 存储配置生成器 (Geek Edition)
 */}}
 {{- define "chatwoot.storage.env" -}}
-{{- $storageType := default "local" .Values.storage.type -}}
-{{- $explicitService := default "" .Values.env.ACTIVE_STORAGE_SERVICE -}}
-{{- $activeStorageService := "local" -}}
-{{- if and $explicitService (or (eq $storageType "local") (ne $explicitService "local")) -}}
-{{- $activeStorageService = $explicitService -}}
-{{- else if eq $storageType "s3" -}}
-{{- $activeStorageService = "amazon" -}}
-{{- else if eq $storageType "gcs" -}}
-{{- $activeStorageService = "google" -}}
-{{- else if or (eq $storageType "local") (eq $storageType "amazon") (eq $storageType "google") (eq $storageType "microsoft") (eq $storageType "s3_compatible") -}}
-{{- $activeStorageService = $storageType -}}
-{{- end -}}
+{{- if eq .Values.storage.type "s3" -}}
 - name: ACTIVE_STORAGE_SERVICE
-  value: {{ $activeStorageService | quote }}
-{{- if eq $storageType "s3" }}
+  value: "s3"
 - name: S3_BUCKET_NAME
   value: {{ .Values.storage.s3.bucket | quote }}
 - name: S3_REGION
@@ -58,11 +46,16 @@
   value: {{ .Values.storage.s3.accessKeyId | quote }}
 - name: S3_SECRET_ACCESS_KEY
   value: {{ .Values.storage.s3.secretAccessKey | quote }}
-{{- else if eq $storageType "gcs" }}
+{{- else if eq .Values.storage.type "gcs" -}}
+- name: ACTIVE_STORAGE_SERVICE
+  value: "google"
 - name: GCS_BUCKET
   value: {{ .Values.storage.gcs.bucket | quote }}
 - name: GCS_PROJECT
   value: {{ .Values.storage.gcs.project | quote }}
+{{- else -}}
+- name: ACTIVE_STORAGE_SERVICE
+  value: "local"
 {{- end -}}
 {{- end -}}
 
@@ -124,11 +117,23 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 {{- $root = .root -}}
 {{- $component = default "" .component -}}
 {{- end -}}
+{{- $scheduling := default dict $root.Values.scheduling -}}
 {{- $hooks := default dict $root.Values.hooks -}}
 {{- $migrate := default dict $hooks.migrate -}}
 {{- $preferExistingPods := true -}}
-{{- if hasKey $migrate "preferExistingPods" -}}
+{{- if hasKey $scheduling "preferExistingPods" -}}
+{{- $preferExistingPods = $scheduling.preferExistingPods -}}
+{{- end -}}
+{{- if and (eq $component "migrate") (hasKey $migrate "preferExistingPods") -}}
 {{- $preferExistingPods = $migrate.preferExistingPods -}}
+{{- end -}}
+{{- $affinityRoles := list -}}
+{{- if eq $component "web" -}}
+{{- $affinityRoles = list "web" -}}
+{{- else if eq $component "worker" -}}
+{{- $affinityRoles = list "worker" -}}
+{{- else if eq $component "migrate" -}}
+{{- $affinityRoles = list "web" "worker" -}}
 {{- end -}}
 {{- with $root.Values.imagePullSecrets }}
 imagePullSecrets:
@@ -156,7 +161,7 @@ affinity:
               operator: Exists
             - key: longhorn
               operator: Exists
-  {{- if and (eq $component "migrate") $preferExistingPods }}
+  {{- if and $preferExistingPods (gt (len $affinityRoles) 0) }}
   podAffinity:
     preferredDuringSchedulingIgnoredDuringExecution:
       - weight: 80
@@ -174,8 +179,9 @@ affinity:
               - key: role
                 operator: In
                 values:
-                  - "web"
-                  - "worker"
+                  {{- range $affinityRoles }}
+                  - {{ . | quote }}
+                  {{- end }}
           topologyKey: kubernetes.io/hostname
   {{- end }}
   {{- end }}

@@ -17,7 +17,7 @@ vpa:
 
 # --- [ 3. 智能存储引擎 (v3.2 New!) ] ---
 storage:
-  type: local # local | s3 | gcs；旧 Rancher Values 可保留 s3_compatible 等 Chatwoot 服务名
+  type: local # local | s3 | gcs
   s3: { bucket: "", region: "", accessKeyId: "", secretAccessKey: "" }
   gcs: { bucket: "", project: "" }
 
@@ -95,6 +95,9 @@ fullnameOverride: "chatwoot"
 podAnnotations: {}
 nodeSelector: {}
 tolerations: []
+scheduling:
+  # 软亲和到已有同类 Pod 所在节点，优先复用节点镜像缓存；不改变 worker+longhorn 硬约束
+  preferExistingPods: true
 serviceAccount: { create: true, annotations: {} }
 hooks:
   migrate:
