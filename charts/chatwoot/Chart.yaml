@@ -1,8 +1,8 @@
 apiVersion: v2
 name: chatwoot
-version: 3.3.52
+version: 3.3.53
 appVersion: "v4.13.0"
-description: "Chatwoot 极客架构版：基于 3.3.38 稳定架构的非破坏性优化版 (v3.3.52) ⚛️"
+description: "Chatwoot 极客架构版：基于 3.3.38 稳定架构的非破坏性优化版 (v3.3.53) ⚛️"
 type: application
 keywords: [chatwoot, minimalism, geek, atomic, hardened]
 home: https://github.com/webees/chatwoot
